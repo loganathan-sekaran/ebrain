@@ -11,10 +11,12 @@ E-Brain is a developmental artificial intelligence system designed to:
 - Master multiple modalities (vision, language, audio, etc.)
 - Self-correct through feedback and teaching
 - Achieve expert-level performance in trained domains
+- Clone into specialized experts for different domains
+- Transfer knowledge between models like teacher and student
 
 ## Vision
 
-Create a model that mimics human brain development, starting from basic sensory processing and progressing through language acquisition, abstract reasoning, and finally achieving expertise in any domain it's taught.
+Create a model that mimics human brain development, starting from basic sensory processing and progressing through language acquisition, abstract reasoning, and finally achieving expertise in any domain it's taught. Once foundational training is complete, E-Brain can be cloned to create domain specialists, and knowledge can be transferred between models through a teacher-student paradigm, enabling a collaborative ecosystem of AI models.
 
 ## Documentation Structure
 
@@ -24,6 +26,7 @@ Create a model that mimics human brain development, starting from basic sensory 
 - **[04-implementation-roadmap.md](04-implementation-roadmap.md)** - Detailed implementation plan and milestones
 - **[05-technical-stack.md](05-technical-stack.md)** - Technology choices and tools
 - **[06-challenges-and-solutions.md](06-challenges-and-solutions.md)** - Known challenges and mitigation strategies
+- **[07-model-cloning-and-knowledge-transfer.md](07-model-cloning-and-knowledge-transfer.md)** - Model specialization and inter-model knowledge transfer
 
 ## Project Status
 
