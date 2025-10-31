@@ -27,6 +27,7 @@ Create a model that mimics human brain development, starting from basic sensory 
 - **[05-technical-stack.md](05-technical-stack.md)** - Technology choices and tools
 - **[06-challenges-and-solutions.md](06-challenges-and-solutions.md)** - Known challenges and mitigation strategies
 - **[07-model-cloning-and-knowledge-transfer.md](07-model-cloning-and-knowledge-transfer.md)** - Model specialization and inter-model knowledge transfer
+- **[08-tech-stack-decision-framework.md](08-tech-stack-decision-framework.md)** - Comprehensive rationale for technology choices considering performance, collaboration, and future-proofing
 
 ## Project Status
 
