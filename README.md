@@ -34,14 +34,64 @@ Learning follows human-inspired stages:
 - **Phase 4**: Abstract Reasoning (3-7yr) - Logical thinking, transfer learning
 - **Phase 5**: Expertise (7yr+) - Domain mastery, self-directed learning
 
-### 3. Continual Learning
+### 3. Concept-Driven Learning
+Hierarchical concept formation from atomic to expert-level concepts:
+- **Atomic Concepts** (Level 0): Colors, shapes, edges, tones (like pixels/phonemes)
+- **Basic Concepts** (Level 1): Object parts, simple patterns (combining atomic features)
+- **Intermediate Concepts** (Level 2): Complete objects, words (composing basic concepts)
+- **Abstract Concepts** (Level 3): Categories, relationships (generalizing from examples)
+- **Expert Concepts** (Level 4): Domain theories, meta-concepts (high-level abstractions)
+
+Concepts compose through multiple rules: AND (all features), OR (alternatives), SEQUENCE (order matters), SPATIAL (arrangement), FUNCTIONAL (relationships). Enables compositional generalization—understanding "red car" even if never seen one, by combining existing "red" and "car" concepts.
+
+### 4. Continual Learning
 Prevents catastrophic forgetting through multiple strategies (EWC, A-GEM, Experience Replay, Progressive Networks).
 
-### 4. Model Cloning
+### 5. Multi-Stage Reasoning
+Enables iterative, deliberate thinking for complex tasks through 5-stage progressive reasoning:
+- **Stage 0**: Surface pattern recognition (fast path)
+- **Stage 1**: Relationship extraction and connections
+- **Stage 2**: Deep analysis and abstraction
+- **Stage 3**: Integration with prior knowledge
+- **Stage 4**: Verification and refinement
+
+Depth adapts based on task complexity and confidence levels, mimicking human thought processes.
+
+### 6. Model Cloning
 Once trained, the base model can be cloned to create specialized variants for different domains (medical, coding, games, languages) without training from scratch.
 
-### 5. Knowledge Transfer
+### 7. Knowledge Transfer
 Models can teach each other specific concepts through a teacher-student paradigm, transferring reasoning patterns and strategies, not just parameters.
+
+### 8. Intrinsic Motivation & Developmental Rewards
+E-Brain's learning evolves from external rewards to intrinsic motivation, mimicking human development:
+- **Phase 1 (Infant)**: Prediction accuracy + curiosity (self-supervised)
+- **Phase 2 (Toddler)**: Exploration + task success + competence growth
+- **Phase 3 (Child)**: Communication success + human feedback (praise/criticism)
+- **Phase 4 (Student)**: Problem-solving + transfer learning + mastery
+- **Phase 5 (Adult)**: **Human utility** (primary) + alignment + continuous improvement
+
+**No emotions required**—pure information-theoretic rewards (curiosity = uncertainty reduction) and utility-based goals (helping humans). As E-Brain matures, dependency on external rewards decreases while intrinsic motivation (curiosity, mastery, purpose) dominates.
+
+### 9. Self-Identity & Social Cognition
+E-Brain develops a sense of "I" (self), "You" (others), and "They" (third parties) through embodied experience:
+
+**Developmental Progression:**
+- **Phase 1 (Body Schema)**: Maps sensors/actuators—"What I can sense and do"
+- **Phase 2 (Agency)**: Distinguishes self-caused from external events—"I vs not-I"
+- **Phase 3 (Theory of Mind)**: Tracks others' beliefs and goals—"You know X, but I know Y"
+- **Phase 4 (Multi-Agent)**: Coordinates with multiple entities, including E-Brain peers
+- **Phase 5 (Social Identity)**: Mature social relationships with purpose and values
+
+**Key Capabilities:**
+- **Person Recognition**: Grounds pronouns (I/you/he/she/they) to entities
+- **Mental Modeling**: Tracks what each entity knows, wants, and can do
+- **Perspective Taking**: Simulates situations from others' viewpoints
+- **Multi-Entity Coordination**: Manages group conversations, collaborative tasks
+- **E-Brain Collaboration**: Structured protocol for peer-to-peer learning and teamwork
+- **Relationship Types**: Teacher (learn from), peer (collaborate), student (teach), user (serve)
+
+Enables **human-like social intelligence** without requiring emotions—pure information-theoretic modeling of mental states and relationships.
 
 ## 📚 Documentation
 
@@ -176,4 +226,4 @@ Inspired by:
 
 **Note**: This is an experimental research project. The timeline and scope are ambitious. See [docs/01-feasibility-analysis.md](docs/01-feasibility-analysis.md) for detailed feasibility assessment.
 
-*Last Updated: October 31, 2025*
+*Last Updated: November 3, 2025*

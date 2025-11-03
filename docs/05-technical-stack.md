@@ -70,6 +70,11 @@ class EBrainModule(pl.LightningModule):
 - Vision Transformer (ViT) for global reasoning
 - DINOv2 for self-supervised features
 
+**Concept-Driven Vision:**
+- Feature extractors for atomic visual concepts (color, shape, texture)
+- Object part detectors for compositional understanding
+- Scene graph generation for relational concepts
+
 ### Language Processing
 
 **Libraries:**
@@ -82,6 +87,12 @@ class EBrainModule(pl.LightningModule):
 - BERT-style encoders (modified)
 - GPT-style decoders (modified)
 - Custom growable transformers
+
+**Multi-Stage Reasoning Support:**
+- Chain-of-thought prompting patterns
+- Iterative refinement loops (custom implementation)
+- Reasoning trace logging for interpretability
+- Step-by-step verification modules
 
 ### Audio Processing
 
@@ -132,6 +143,42 @@ class LongTermMemory:
 - **Pinecone** - Cloud-based, production-ready (for deployment)
 - **Milvus** - Open-source, scalable (for large-scale)
 - **ChromaDB** - Document-focused (if needed)
+
+### Concept Hierarchy Graph
+
+**NetworkX**
+
+**Purpose:** 
+- Manage directed acyclic graph (DAG) of concept relationships
+- Graph traversal and analysis
+- Parent-child concept navigation
+
+```python
+import networkx as nx
+
+class ConceptHierarchy:
+    def __init__(self):
+        self.graph = nx.DiGraph()
+        
+    def add_concept_edge(self, parent_id, child_id, weight):
+        self.graph.add_edge(child_id, parent_id, weight=weight)
+        
+    def get_ancestors(self, concept_id):
+        return nx.ancestors(self.graph, concept_id)
+        
+    def get_concept_level(self, concept_id):
+        # Atomic concepts have level 0
+        if self.graph.in_degree(concept_id) == 0:
+            return 0
+        return max(self.get_concept_level(p) 
+                   for p in self.graph.predecessors(concept_id)) + 1
+```
+
+**Features Used:**
+- Topological sorting for learning order
+- Shortest path for concept relationships
+- Subgraph extraction for domain isolation
+- Graph visualization for interpretability
 
 ### Episodic Memory
 

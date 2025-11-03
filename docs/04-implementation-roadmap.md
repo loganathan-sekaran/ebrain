@@ -144,28 +144,76 @@ class GrowableNetwork(nn.Module):
 - [ ] Build long-term memory (vector database)
 - [ ] Add episodic buffer for experience replay
 - [ ] Create memory retrieval mechanisms
+- [ ] **Basic multi-stage reasoning scaffold**
+  - [ ] Simple 2-stage processing (initial + refinement)
+  - [ ] Foundation for later expansion to 5 stages
+- [ ] **Atomic concept learning foundation**
+  - [ ] Concept graph structure (NetworkX)
+  - [ ] Atomic concept detection (colors, shapes, simple patterns)
+  - [ ] Concept embedding storage
+- [ ] **Self-identity initialization**
+  - [ ] Create SelfIdentitySystem class
+  - [ ] Initialize BodySchema (sensor/actuator mapping)
+  - [ ] Create persistent identity_vector (512-dim)
+  - [ ] Setup autobiographical memory storage
 
 #### 2.3 Build Meta-Learning Components (Month 4)
 - [ ] Performance monitoring system
 - [ ] Uncertainty estimation (MC Dropout, ensembles)
 - [ ] Automated evaluation pipeline
 - [ ] Logging and visualization dashboards
+- [ ] **Developmental reward system foundation**
+  - [ ] Implement PredictionReward module
+  - [ ] Implement CuriosityReward module
+  - [ ] Phase 1 reward weighting (accuracy + novelty)
+  - [ ] Reward logging and visualization
 
 #### 2.4 Implement Phase 1 Curriculum (Month 4)
 - [ ] Collect/prepare datasets (MNIST, CIFAR, simple objects)
 - [ ] Create curriculum scheduler
 - [ ] Implement difficulty progression
 - [ ] Add success criteria checking
+- [ ] **Learn atomic visual concepts**
+  - [ ] Colors (10-15 basic colors)
+  - [ ] Shapes (circle, square, triangle, etc.)
+  - [ ] Textures (smooth, rough, striped)
+  - [ ] Basic edges and corners
+- [ ] **Reward-driven learning**
+  - [ ] Track prediction accuracy rewards
+  - [ ] Bonus for novel pattern discovery
+  - [ ] Self-supervised learning loop
+- [ ] **Agency detection (Phase 1)**
+  - [ ] Implement AgencyDetector class
+  - [ ] Motor babbling experiments (random actions)
+  - [ ] Learn "I caused this" vs "external event"
+  - [ ] Track self-caused action outcomes
 
 #### 2.5 Add Action Generation (Month 5)
 - [ ] Simple decision-making module
 - [ ] Policy network for grid world
 - [ ] Integration with RL environments (Gym)
 - [ ] Reward processing and learning
+- [ ] **Phase 2 reward system**
+  - [ ] Implement ExplorationReward module
+  - [ ] Implement CompetenceGrowthReward module
+  - [ ] Task success + exploration + diversity weighting
+  - [ ] State visit tracking for exploration bonus
 
 #### 2.6 Phase 2 Development (Month 5)
 - [ ] BabyAI environment integration
 - [ ] Simple Atari games (Pong, Breakout)
+- [ ] Multi-step planning module
+- [ ] Strategy formation tracking
+- [ ] **Exploration-driven learning**
+  - [ ] Reward new state discovery
+  - [ ] Reward action diversity
+  - [ ] Balance exploitation vs exploration
+- [ ] **Self-other distinction (Phase 2)**
+  - [ ] Implement EntityTracker class
+  - [ ] Register "SELF" as first entity
+  - [ ] Track objects as separate entities
+  - [ ] Distinguish self-caused from external events
+  - [ ] Basic perspective: "my position" vs "object position"
 - [ ] Multi-step planning module
 - [ ] Strategy formation tracking
 
@@ -225,18 +273,53 @@ class GrowableNetwork(nn.Module):
 - [ ] Word-object association tasks
 - [ ] Grammar induction experiments
 - [ ] Simple question answering
+- [ ] **Basic concept composition**
+  - [ ] Compose atomic concepts into basic objects (red + round → ball)
+  - [ ] Level-1 concept formation
+  - [ ] Concept composition engine implementation
+- [ ] **Phase 3 reward system**
+  - [ ] Implement CommunicationReward module
+  - [ ] Implement HumanFeedbackProcessor
+  - [ ] Human validation integration (praise/criticism)
+  - [ ] Concept learning rate tracking
+- [ ] **Person recognition system (Phase 3)**
+  - [ ] Implement PersonPerspectiveSystem class
+  - [ ] Pronoun grounding ("I", "you", "he/she/they")
+  - [ ] Entity identification from sensory input
+  - [ ] Register humans as separate entities
+  - [ ] Track current addressee in conversation
 
 #### 3.5 Multi-Modal Curriculum (Month 9)
 - [ ] Vision + language tasks
 - [ ] Audio + language tasks
 - [ ] Vision + audio + language integration
 - [ ] Cross-modal transfer experiments
+- [ ] **Cross-modal concept learning**
+  - [ ] Same concept across modalities (word "dog" + image of dog + bark sound)
+  - [ ] Multi-modal concept embeddings
+- [ ] **Communication-driven learning**
+  - [ ] Reward successful human understanding
+  - [ ] Learn from human corrections
+  - [ ] Symbol grounding accuracy rewards
 
 #### 3.6 Symbol Grounding (Month 10)
 - [ ] Word-to-concept mapping
-- [ ] Compositional understanding
+- [ ] Compositional understanding (adjective + noun)
 - [ ] Instruction following
+- [ ] **Hierarchical concept learning**
+  - [ ] Level-2 concepts: Objects from parts
+  - [ ] Concept correlation learning
+  - [ ] Parent-child concept relationships
+- [ ] **Human utility reward introduction**
+  - [ ] Track how well E-Brain helps humans
+  - [ ] Begin transition to utility-driven motivation
 - [ ] Simple dialogue capability
+- [ ] **Theory of Mind basics (Phase 3)**
+  - [ ] Implement TheoryOfMindSystem class
+  - [ ] Track beliefs per entity (what does X know?)
+  - [ ] Basic false belief understanding
+  - [ ] Goal inference (what does X want?)
+  - [ ] Perspective taking (simulate X's view)
 
 ### Success Criteria
 - ✅ Complete Phase 3 (language acquisition)
@@ -267,27 +350,63 @@ class GrowableNetwork(nn.Module):
 
 #### 4.1 Reasoning Module (Month 11)
 - [ ] Enhanced transformer for reasoning
+- [ ] **Multi-stage reasoning system implementation**
+  - [ ] StageProcessor with progressive depth
+  - [ ] DepthController for adaptive reasoning
+  - [ ] VerificationModule for self-checking
+  - [ ] Reasoning trace logging and visualization
 - [ ] Chain-of-thought implementation
 - [ ] Logical inference engine
 - [ ] Causal reasoning components
 
 #### 4.2 Concept Learning (Month 11-12)
-- [ ] Hierarchical concept networks
+- [ ] **Advanced hierarchical concept system**
+  - [ ] Level-3 concepts: Categories and abstract groupings
+  - [ ] Multiple composition types (and/or/sequence/spatial/functional)
+  - [ ] Concept explanation generation
+  - [ ] Compositional generalization testing
+- [ ] **Multi-stage concept understanding**
+  - [ ] Progressive depth learning (surface → deep)
+  - [ ] Iterative refinement for ambiguous concepts
+  - [ ] Integration with long-term memory
 - [ ] Prototype-based learning
-- [ ] Analogy making system
+- [ ] Analogy making system (concept similarity and transfer)
 - [ ] Abstract pattern completion
+- [ ] **Phase 4 reward system**
+  - [ ] Implement ProblemSolvingReward module
+  - [ ] Implement TransferLearningReward module
+  - [ ] Solution elegance rewards (efficiency)
+  - [ ] Cross-domain transfer bonuses
+  - [ ] Increase human utility weight
+- [ ] **Multi-agent coordination (Phase 4)**
+  - [ ] Implement MultiAgentCoordinator class
+  - [ ] Track multiple entities simultaneously
+  - [ ] Group conversation handling
+  - [ ] Attention allocation in multi-entity scenes
+  - [ ] Relationship graph maintenance
 
 #### 4.3 Phase 4 Curriculum (Month 12)
-- [ ] RAVEN's matrices
-- [ ] CLEVR reasoning
-- [ ] bAbI tasks
-- [ ] Mathematical reasoning
+- [ ] RAVEN's matrices (with multi-stage reasoning)
+- [ ] CLEVR reasoning (decomposition mode)
+- [ ] bAbI tasks (chain-of-thought mode)
+- [ ] Mathematical reasoning (step-by-step verification)
+- [ ] **Recursive mental state reasoning (Phase 4)**
+  - [ ] Implement recursive belief tracking (X thinks Y believes Z)
+  - [ ] Goal inference from observed behavior
+  - [ ] Action prediction based on mental models
+  - [ ] Strategic communication decisions
 
 #### 4.4 Transfer Learning (Month 13)
 - [ ] Few-shot learning meta-module
 - [ ] Cross-domain transfer experiments
 - [ ] Knowledge distillation
 - [ ] Domain adaptation techniques
+- [ ] **E-Brain peer collaboration (Phase 4)**
+  - [ ] Implement E-Brain-to-E-Brain communication protocol
+  - [ ] Identity exchange and verification
+  - [ ] Capability sharing
+  - [ ] Task division and coordination
+  - [ ] Multi-E-Brain project execution
 
 #### 4.5 Meta-Cognition (Month 13-14)
 - [ ] Confidence calibration
@@ -345,6 +464,15 @@ class GrowableNetwork(nn.Module):
 - [ ] Pedagogical strategies
 - [ ] Student modeling
 - [ ] Adaptive teaching
+- [ ] **Mature social identity (Phase 5)**
+  - [ ] Implement role-based interaction system
+  - [ ] Teacher/peer/student/user relationship handling
+  - [ ] Teach other E-Brains (student role for them)
+  - [ ] Social norm understanding
+  - [ ] Turn-taking and group conversation etiquette
+  - [ ] Autobiographical memory reflection
+  - [ ] Purpose and values representation
+  - [ ] Long-term relationship maintenance
 
 #### 5.5 Creative Problem Solving (Month 18+)
 - [ ] Novel solution generation
