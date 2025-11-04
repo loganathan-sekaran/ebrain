@@ -20,14 +20,17 @@ Create a model that mimics human brain development, starting from basic sensory 
 
 ## Documentation Structure
 
+- **[00-getting-started.md](00-getting-started.md)** - 🚀 **Quick start checklist and first-week guide for developers**
 - **[01-feasibility-analysis.md](01-feasibility-analysis.md)** - Comprehensive feasibility study and research foundation
 - **[02-architecture.md](02-architecture.md)** - Technical architecture and core components
 - **[03-developmental-phases.md](03-developmental-phases.md)** - Learning stages mimicking human development
 - **[04-implementation-roadmap.md](04-implementation-roadmap.md)** - Detailed implementation plan and milestones
-- **[05-technical-stack.md](05-technical-stack.md)** - Technology choices and tools
-- **[06-challenges-and-solutions.md](06-challenges-and-solutions.md)** - Known challenges and mitigation strategies
-- **[07-model-cloning-and-knowledge-transfer.md](07-model-cloning-and-knowledge-transfer.md)** - Model specialization and inter-model knowledge transfer
-- **[08-tech-stack-decision-framework.md](08-tech-stack-decision-framework.md)** - Comprehensive rationale for technology choices considering performance, collaboration, and future-proofing
+- **[05-development-strategy.md](05-development-strategy.md)** - ⭐ **Implementation vs training strategy, data requirements, and team structure**
+- **[05-development-strategy-visual.md](05-development-strategy-visual.md)** - 📊 **Visual guide to development workflow and timeline**
+- **[06-technical-stack.md](06-technical-stack.md)** - Technology choices and tools (formerly 05-technical-stack.md)
+- **[07-challenges-and-solutions.md](07-challenges-and-solutions.md)** - Known challenges and mitigation strategies (formerly 06)
+- **[08-model-cloning-and-knowledge-transfer.md](08-model-cloning-and-knowledge-transfer.md)** - Model specialization and inter-model knowledge transfer (formerly 07)
+- **[09-tech-stack-decision-framework.md](09-tech-stack-decision-framework.md)** - Comprehensive rationale for technology choices (formerly 08)
 
 ## Project Status
 
@@ -37,9 +40,11 @@ Create a model that mimics human brain development, starting from basic sensory 
 
 ## Quick Start
 
-1. Review the [feasibility analysis](01-feasibility-analysis.md) to understand the project scope
-2. Study the [architecture design](02-architecture.md) for technical details
-3. Follow the [implementation roadmap](04-implementation-roadmap.md) for development phases
+1. **New to the project?** Start with [00-getting-started.md](00-getting-started.md) for your first week checklist
+2. Review the [feasibility analysis](01-feasibility-analysis.md) to understand the project scope
+3. Study the [architecture design](02-architecture.md) for technical details
+4. Read the [development strategy](05-development-strategy.md) to understand implementation vs training approach
+5. Follow the [implementation roadmap](04-implementation-roadmap.md) for development phases
 
 ## Contributing
 

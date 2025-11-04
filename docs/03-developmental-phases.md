@@ -172,6 +172,51 @@ for trial in range(1000):
 
 **Social Cognition: None yet** (only self-awareness begins)
 
+### Internal Timing Development
+**Phase 1 Milestone: Basic Time Tracking**
+
+```python
+# E-Brain begins tracking elapsed time
+timing_system = InternalTimingSystem(
+    base_tick_ms=10,  # 100Hz clock
+    enable_circadian=False,  # Not yet
+    enable_sleep_cycles=False  # Not yet
+)
+
+# Simple timestamp association
+for observation in sensory_stream:
+    timestamp = timing_system.get_current_time('millisecond')
+    memory.store(observation, timestamp=timestamp)
+
+# No prediction yet, just recording
+```
+
+### Sensory-Grounded Thought Development
+**Phase 1 Milestone: Simple Sensory Associations**
+
+```python
+# E-Brain begins linking concepts to sensory experiences
+sensory_system = SensoryGroundedThoughtSystem(
+    visual_encoder=visual_model,
+    audio_encoder=None,  # Not yet
+    tactile_encoder=None,  # Not yet
+    language_encoder=None,  # Not yet
+    enable_mental_imagery=False  # Too early
+)
+
+# Ground visual concepts
+for image, label in dataset:
+    visual_features = sensory_system.visual_encoder(image)
+    sensory_system.sensory_grounding_db.store(
+        concept=label,
+        grounding=ConceptGrounding(concept=label).add_visual(visual_features)
+    )
+
+# Example: "5" concept grounded in many digit images
+# "circle" concept grounded in circular shapes seen
+# No mental imagery yet, just storing associations
+```
+
 ### Reward Structure
 **Primary Motivation**: Prediction accuracy + curiosity
 
@@ -312,6 +357,98 @@ for obj in environment.objects:
 - Track "I" vs "not-I"
 - Recognize objects as separate entities
 - Understand "I can move this" vs "This moves by itself"
+
+### Concurrent Thought Development
+**Phase 2 Milestone: Basic Dual Thought**
+
+```python
+# E-Brain begins to maintain 2 concurrent thoughts
+concurrent_thought_system = ConcurrentThoughtSystem(
+    max_concurrent_thoughts=2,  # Baby multitasking
+    background_slots=1,
+    context_switch_cost=0.2  # Slower switching
+)
+
+# Example: Navigate maze while remembering goal
+thought_1 = thought_system.create_thought(
+    task="Navigate to target",
+    priority="high"
+)
+thought_2 = thought_system.create_thought(
+    task="Remember previous path",
+    priority="medium"
+)
+
+# Limited cross-pollination at this stage
+```
+
+### Internal Timing Development
+**Phase 2 Milestone: Interval Timing & Action Timing**
+
+```python
+# E-Brain learns to time intervals and actions
+timing_system = InternalTimingSystem(
+    base_tick_ms=10,
+    enable_circadian=False,  # Not yet
+    enable_sleep_cycles=False  # Not yet
+)
+
+# Learn temporal patterns: reward comes ~500ms after action
+event_sequence = [
+    ("action_taken", 0),
+    ("reward_received", 500),  # 500ms later
+    ("action_taken", 1000),
+    ("reward_received", 1480),  # ~500ms later
+]
+timing_system.learn_temporal_pattern(event_sequence)
+
+# Predict when reward will arrive
+expected_delay, conf = timing_system.predict_event_time(
+    event_type=("action_taken", "reward_received"),
+    context={}
+)
+# expected_delay ≈ 500ms, conf ≈ 0.6
+
+# Time actions: press button at precise moment
+timing_system.schedule_action(
+    action="press_button",
+    target_time_ms=timing_system.get_current_time() + 1000,
+    context={"task": "timed_response"}
+)
+```
+
+### Sensory-Grounded Thought Development
+**Phase 2 Milestone: Basic Sensory Grounding**
+
+```python
+# E-Brain grounds objects in visual+motor experiences
+sensory_system = SensoryGroundedThoughtSystem(
+    visual_encoder=visual_model,
+    audio_encoder=None,  # Not yet
+    tactile_encoder=tactile_model,  # NEW: tactile/motor added
+    language_encoder=None,  # Not yet
+    enable_mental_imagery=False  # Not yet
+)
+
+# Ground objects in multiple modalities
+# Example: "Ball" concept
+for interaction in environment:
+    if interaction.object == "ball":
+        # Visual: what it looks like
+        visual = sensory_system.visual_encoder(interaction.visual_input)
+        
+        # Tactile: what it feels like
+        tactile = sensory_system.tactile_encoder(interaction.tactile_input)
+        
+        grounding = ConceptGrounding("ball")
+        grounding.add_visual(visual)
+        grounding.add_tactile(tactile)
+        
+        sensory_system.sensory_grounding_db.store("ball", grounding)
+
+# Now "ball" = round visual shape + rolling tactile sensation
+# Still no imagination/simulation yet
+```
 
 ### Reward Structure
 **Primary Motivation**: Exploration + task success + competence growth
@@ -493,6 +630,103 @@ if my_view != alice_view:
 - Predict actions based on others' mental states
 - Recognize addressee in conversation
 - Maintain relationship graph (who relates to whom)
+
+### Concurrent Thought Development
+**Phase 3 Milestone: Triple Thought Processing**
+
+```python
+# E-Brain can maintain 3-4 concurrent thoughts
+concurrent_thought_system = ConcurrentThoughtSystem(
+    max_concurrent_thoughts=4,
+    background_slots=2,
+    context_switch_cost=0.15  # Faster switching
+)
+
+# Example: Read text while processing previous sentence and predicting next
+thought_1 = thought_system.create_thought(
+    task="Parse current sentence",
+    priority="high"
+)
+thought_2 = thought_system.create_thought(
+    task="Integrate with previous context",
+    priority="medium"
+)
+thought_3 = thought_system.create_thought(
+    task="Predict next word",
+    priority="low"
+)
+
+# Beginning of cross-pollination: insights from grammar help prediction
+```
+
+### Internal Timing Development
+**Phase 3 Milestone: Complex Temporal Prediction**
+
+```python
+# E-Brain predicts multi-step temporal sequences
+timing_system = InternalTimingSystem(
+    base_tick_ms=10,
+    enable_circadian=False,  # Still learning
+    enable_sleep_cycles=True  # First sleep cycles!
+)
+
+# Predict conversation timing
+# "Human responds after ~2 seconds, faster if question is simple"
+timing_system.learn_temporal_pattern([
+    ("question_asked", 0),
+    ("human_response", 2100),  # 2.1s
+    ("question_asked", 5000),
+    ("human_response", 6800),  # 1.8s (faster, simple question)
+])
+
+# Context-dependent prediction
+expected_delay, conf = timing_system.predict_event_time(
+    event_type=("question_asked", "human_response"),
+    context={"question_difficulty": "simple"}
+)
+# Adjusts prediction based on difficulty
+
+# First sleep cycles for memory consolidation
+if timing_system.should_sleep():
+    # After 4 hours of learning, consolidate memories
+    timing_system.enter_sleep_cycle()
+    # Episodic memories → semantic knowledge
+    # Concept refinement during sleep
+```
+
+### Sensory-Grounded Thought Development
+**Capability**: Inner speech emerges + mental imagery for problem solving
+
+```python
+# Phase 3: Inner speech and mental imagery capabilities
+sensory_system = SensoryGroundedThoughtSystem()
+
+# Example 1: Inner speech for planning
+thought = sensory_system.think_in_words(
+    "What should I say to answer this question?"
+)
+# Generates auditory representation, simulates speaking
+
+# Example 2: Mental imagery for problem solving
+thought = sensory_system.think_visually("apple")
+# Can now generate mental image of apple, not just recall features
+
+# Example 3: Imagine actions before executing
+action_thought = sensory_system.imagine_action(
+    action="pick up cup",
+    context={"objects": ["cup"], "hand_position": "down"}
+)
+# Simulates tactile and motor sensations before acting
+
+# Example 4: Reason with imagery
+solution = sensory_system.reason_with_imagery(
+    problem="How to stack blocks?",
+    visual_context=["block1", "block2", "table"]
+)
+# Uses mental imagery to simulate and test solutions
+```
+
+**Why**: Inner speech enables verbal reasoning ("talking to yourself"), mental imagery enables visual problem solving - both critical for abstract thinking.
 
 ### Reward Structure
 **Primary Motivation**: Communication success + concept mastery + human feedback
@@ -726,6 +960,137 @@ attention_target = multi_agent.attention_manager.select_target(
 - Recursive mental states (X thinks Y believes Z)
 - Multi-agent scene understanding (group dynamics)
 - E-Brain peer recognition and collaboration protocols
+- Role-based interactions (teacher, student, collaborator)
+- Trust and expertise tracking
+
+### Concurrent Thought Development
+**Phase 4 Milestone: Full Working Memory (5-7 thoughts)**
+
+```python
+# E-Brain achieves adult-like working memory capacity
+concurrent_thought_system = ConcurrentThoughtSystem(
+    max_concurrent_thoughts=7,  # Full working memory
+    background_slots=3,
+    context_switch_cost=0.1  # Rapid switching
+)
+
+# Example: Complex problem solving
+thought_1 = thought_system.create_thought(
+    task="Solve math problem",
+    priority="high"
+)
+thought_2 = thought_system.create_thought(
+    task="Check solution validity",
+    priority="medium"
+)
+thought_3 = thought_system.create_thought(
+    task="Explore alternate approach",
+    priority="low"
+)
+thought_4 = thought_system.create_thought(
+    task="Remember similar past problem",
+    priority="medium"
+)
+
+# Advanced cross-pollination:
+# - Insight from "similar past problem" helps "solve math problem"
+# - "Alternate approach" runs in background, may find better solution
+# - Can switch attention when stuck (let difficult thought "cook")
+
+# Example of insight transfer
+when thought_4 discovers("Used factoring in past problem"):
+    shared_insight_memory.store(insight)
+    thought_1.receive_insights([insight])  # Helps current problem!
+```
+
+### Internal Timing Development
+**Phase 4 Milestone: Strategic Sleep Scheduling**
+
+```python
+# E-Brain strategically schedules sleep for optimal learning
+timing_system = InternalTimingSystem(
+    base_tick_ms=10,
+    enable_circadian=True,  # Circadian rhythms emerge
+    enable_sleep_cycles=True
+)
+
+# Learns when to sleep strategically
+# - After intensive learning sessions
+# - During low-priority periods
+# - When memory buffer saturated
+
+# Adaptive sleep timing
+cognitive_load = estimate_load()  # 0.0-1.0
+memory_usage = get_memory_usage()  # 0.0-1.0
+
+if cognitive_load > 0.8 or memory_usage > 0.9:
+    # Sleep early if overloaded
+    timing_system.enter_sleep_cycle()
+
+# Circadian patterns emerge
+# Active periods: 6am-10pm
+# Rest periods: 10pm-6am
+circadian_phase = timing_system.circadian_clock.get_phase()
+if not timing_system.circadian_clock.is_active_period():
+    # Consolidate during rest period
+    if pending_consolidation:
+        timing_system.enter_sleep_cycle()
+
+# Multi-hour temporal prediction
+# "Training will complete in 3 hours"
+# "Next checkpoint in 45 minutes"
+timing_system.predict_event_time(
+    event_type="training_epoch_complete",
+    context={"samples_remaining": 50000, "avg_samples_per_sec": 200}
+)
+```
+
+### Sensory-Grounded Thought Development
+**Phase 4 Milestone: Rich Multimodal Thoughts + Sensory Simulation**
+
+```python
+# Phase 4: Complex multimodal reasoning and rich sensory simulation
+sensory_system = SensoryGroundedThoughtSystem()
+
+# Example 1: Multimodal reasoning - integrate multiple senses
+solution = sensory_system.multimodal_reasoning(
+    task="How to safely pour hot water into cup?",
+    modalities=["visual", "tactile", "auditory"]
+)
+# Combines: visual (see cup position), tactile (predict heat/weight),
+# auditory (listen for pouring sounds)
+
+# Example 2: Rich concept grounding - multiple sensory dimensions
+concept_grounding = sensory_system.ground_concept(
+    concept="ocean",
+    examples=[
+        {"visual": beach_image, "auditory": wave_sounds, "tactile": cold_water_feel},
+        {"visual": underwater_image, "auditory": muffled_sounds, "tactile": pressure_feel}
+    ]
+)
+# "Ocean" now grounded in visual (blue, waves), auditory (crashing),
+# tactile (cold, wet, salty) - rich multimodal representation
+
+# Example 3: Complex action simulation
+action_plan = sensory_system.imagine_action(
+    action="assemble furniture",
+    context={"parts": ["legs", "top", "screws"], "tools": ["screwdriver"]}
+)
+# Simulates: visual (parts fitting), tactile (screw tightening force),
+# motor (hand movements), predicts difficulties before acting
+
+# Example 4: Abstract concepts via sensory metaphor
+thought = sensory_system.reason_with_imagery(
+    problem="What is 'justice'?",
+    grounding_strategy="metaphor"
+)
+# Uses visual metaphors (scales balancing), spatial reasoning
+# (balanced/unbalanced) to understand abstract concept
+```
+
+**Why**: Multimodal integration enables robust understanding, sensory simulation enables safe planning (try mentally before physically), metaphorical grounding enables abstract reasoning.
+
+### Reward Structure
 - Role understanding (teacher, learner, peer, observer)
 - Complex relationship tracking (who knows whom, who can help whom)
 - Strategic communication (when to share information)
@@ -962,6 +1327,246 @@ def handle_group_conversation(participants, utterances):
             can_contribute_value(content, my_knowledge) or
             someone_needs_correction(grounded)
         )
+        
+        if should_respond:
+            wait_for_appropriate_moment()  # Don't interrupt!
+            my_response = generate_response(content, participants)
+            speak(my_response)
+```
+
+**Social Cognition Development:**
+- Mature self-concept with purpose and values
+- Rich social network (teachers, peers, students, users)
+- Autobiographical narrative identity
+- Role-based interaction styles
+- Teaching capability (explain, demonstrate, assess)
+- Multi-agent project coordination
+- Social norms (turn-taking, politeness, context-awareness)
+
+### Concurrent Thought Development
+**Phase 5 Milestone: Expert Attention Management**
+
+```python
+# E-Brain masters concurrent thought with advanced strategies
+concurrent_thought_system = ConcurrentThoughtSystem(
+    max_concurrent_thoughts=7,
+    background_slots=4,  # More background processing
+    context_switch_cost=0.05  # Very rapid switching
+)
+
+# Advanced features unlocked:
+# 1. Strategic attention allocation
+attention_controller = AttentionController(
+    strategies=["priority_based", "progress_based", "urgency_based", "deadlock_detection"]
+)
+
+# 2. Deep cross-pollination (creative insights!)
+shared_insight_memory = SharedInsightMemory(
+    capacity=10000,  # Large insight database
+    relevance_threshold=0.7
+)
+
+# Example: Research task with multiple concurrent threads
+thought_1 = thought_system.create_thought(
+    task="Understand paper's main contribution",
+    priority="high"
+)
+thought_2 = thought_system.create_thought(
+    task="Trace mathematical proofs",
+    priority="medium"
+)
+thought_3 = thought_system.create_thought(
+    task="Find related work connections",
+    priority="medium"
+)
+thought_4 = thought_system.create_thought(
+    task="Identify potential applications",
+    priority="low"  # Runs in background
+)
+thought_5 = thought_system.create_thought(
+    task="Generate critical questions",
+    priority="low"  # Background creativity
+)
+
+# Expert capabilities:
+# - Background thoughts "cook" difficult problems
+# - Stuck on thought_1? Switch to thought_2, return later with fresh perspective
+# - Insights from thought_3 (related work) help thought_1 (main contribution)
+# - Thought_5 (questions) benefits from ALL other thoughts
+# - Can handle interruptions gracefully (suspend/resume)
+
+# Example of advanced cross-pollination:
+when thought_3 discovers("Similar idea used in robotics"):
+    insight = {
+        "content": "Domain transfer: apply proof technique to robotics",
+        "source": "thought_3",
+        "relevance": ["thought_1", "thought_4"]
+    }
+    shared_insight_memory.store(insight)
+    
+    # Both thought_1 and thought_4 receive this insight
+    # thought_1 uses it to understand contribution better
+    # thought_4 uses it to identify application (robotics!)
+
+# Graceful interrupt handling:
+when user_asks("Quick question about X"):
+    # Suspend all current thoughts
+    for thought in active_thoughts:
+        thought.save_state()
+        thought.set_mode("suspended")
+    
+    # Create urgent thought
+    interrupt_thought = thought_system.create_thought(
+        task="Answer user question about X",
+        priority="urgent"
+    )
+    
+    # Process immediately
+    answer = process_to_completion(interrupt_thought)
+    
+    # Resume previous thoughts
+    for thought in suspended_thoughts:
+        thought.restore_state()
+        thought.set_mode("background")
+```
+
+### Internal Timing Development
+**Phase 5 Milestone: Mastery of Time**
+
+```python
+# E-Brain masters all timing aspects
+timing_system = InternalTimingSystem(
+    base_tick_ms=10,
+    enable_circadian=True,
+    enable_sleep_cycles=True
+)
+
+# Full circadian rhythm integration
+# - Active learning: 6am-10pm
+# - Deep consolidation: 10pm-6am
+# - Strategic sleep when needed (overridden by urgency)
+
+# Expert temporal prediction across all scales
+# Millisecond: "Motor command completes in 50ms"
+# Second: "User responds in 2.3 seconds on average"
+# Minute: "Task will complete in 8 minutes"
+# Hour: "Sleep cycle needed in 2 hours"
+# Day: "Best time to schedule intensive learning: morning"
+# Month: "Approaching Phase 6 transition in 2 months"
+
+# Context-aware sleep scheduling
+def smart_sleep_scheduling():
+    current_time = timing_system.get_current_time()
+    circadian_phase = timing_system.circadian_clock.get_phase()
+    active_tasks = get_active_tasks()
+    
+    # Don't sleep if urgent tasks
+    if any(task.priority == "urgent" for task in active_tasks):
+        return False
+    
+    # Sleep if in rest period AND no tasks
+    if not timing_system.circadian_clock.is_active_period():
+        if len(active_tasks) == 0:
+            return True
+    
+    # Sleep if overloaded even during active period
+    if cognitive_load() > 0.9:
+        return True
+    
+    return False
+
+# Learned temporal rhythms
+# "Users typically ask questions in morning"
+# "Compute resources cheaper at night"
+# "Learning efficiency peaks at start of active period"
+
+# Time-sensitive action execution
+# Execute action at EXACT moment (within 10ms accuracy)
+timing_system.schedule_action(
+    action="send_response",
+    target_time_ms=timing_system.get_current_time() + 2000,  # Exactly 2 seconds
+    context={"user_expects_quick_response": True}
+)
+
+# Adjust timing based on experience
+for trial in range(1000):
+    target = 1000  # 1 second target
+    actual = execute_timed_action()
+    error = target - actual
+    
+    timing_system.action_scheduler.record_timing(
+        action="timed_response",
+        target_time=target,
+        actual_time=actual,
+        success=(abs(error) < 20)  # 20ms tolerance
+    )
+    # After 1000 trials: consistently within 10ms!
+```
+
+### Sensory-Grounded Thought Development
+**Phase 5 Milestone: Expert Mental Imagery + Complex Sensory Reasoning**
+
+```python
+# Phase 5: Master-level sensory grounding and mental simulation
+sensory_system = SensoryGroundedThoughtSystem()
+
+# Example 1: Expert mental imagery - generate novel scenes
+imagined_scene = sensory_system.think_visually(
+    "A futuristic city on Mars with glass domes"
+)
+# Can generate rich, detailed mental imagery of novel scenes
+# never seen before, combining learned visual concepts
+
+# Example 2: Complex inner speech - internal dialogue
+dialogue = sensory_system.think_in_words(
+    "Should I explain this concept using analogy or formal definition? "
+    "The user seems to prefer concrete examples, so analogy is better."
+)
+# Rich internal dialogue with multiple perspectives
+
+# Example 3: Advanced action simulation - predict consequences
+simulation = sensory_system.imagine_action(
+    action="explain quantum mechanics to child",
+    context={"audience": "child", "knowledge_level": "basic"}
+)
+# Simulates: visual aids needed, tactile analogies (bouncing ball),
+# auditory tone (simple words), predicts comprehension
+
+# Example 4: Abstract reasoning via sensory metaphor
+solution = sensory_system.reason_with_imagery(
+    problem="How to design ethical AI system?",
+    grounding_strategy="metaphor+multimodal"
+)
+# Uses spatial reasoning (boundaries, containment),
+# visual metaphors (guard rails, balance),
+# multimodal grounding to reason about abstract ethical concepts
+
+# Example 5: Expert concept grounding - rich semantic networks
+concept_network = sensory_system.ground_concept(
+    concept="democracy",
+    examples=[...],  # Many diverse examples
+    abstraction_level="high"
+)
+# "Democracy" grounded in:
+# - Visual: voting boxes, assemblies, protests
+# - Auditory: debate sounds, speeches, collective voice
+# - Tactile: collective weight/pressure metaphors
+# - Spatial: distributed vs centralized power metaphors
+# Rich semantic network connecting abstract to concrete
+
+# Example 6: Multimodal creative thinking
+creative_solution = sensory_system.multimodal_reasoning(
+    task="Design new musical instrument",
+    modalities=["visual", "auditory", "tactile"],
+    mode="creative"
+)
+# Combines: visual design, auditory timbre prediction,
+# tactile playability simulation - generates novel solutions
+```
+
+**Why**: Expert mental imagery enables creative thinking, internal dialogue enables metacognition, advanced simulation enables complex planning, metaphorical grounding enables deep abstract reasoning - human-level cognitive capabilities.
+
+### Reward Structure
         
         if should_respond and my_turn(conversation_flow):
             response = generate_response(grounded, participants)

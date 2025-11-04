@@ -93,6 +93,82 @@ E-Brain develops a sense of "I" (self), "You" (others), and "They" (third partie
 
 Enables **human-like social intelligence** without requiring emotions—pure information-theoretic modeling of mental states and relationships.
 
+### 10. Concurrent Thought Processing
+E-Brain processes multiple "thoughts" simultaneously, mimicking the brain's ability to work on several problems at once:
+
+**Key Capabilities:**
+- **Parallel Thought Streams**: Maintain 2-7 concurrent reasoning threads (working memory)
+- **Rapid Attention Switching**: Switch focus between thoughts in milliseconds (100-200ms)
+- **Background Processing**: Difficult problems "cook" in background while working on easier ones
+- **Thought Persistence**: Suspend and resume thoughts without losing context
+- **Cross-Pollination**: Insights from one thought help solve others (creative connections!)
+- **Priority Management**: Urgent/important tasks can preempt less critical ones
+
+**Examples:**
+- Solve math problem while remembering related concepts from previous tasks
+- Explore multiple solution approaches in parallel, switch when stuck
+- Read research paper: parse current sentence + integrate context + predict next simultaneously
+
+### 11. Internal Timing and Clock System
+E-Brain maintains multi-scale timing mechanisms, mimicking the brain's ability to track time, predict temporal patterns, and time actions accurately:
+
+**Key Capabilities:**
+- **Multi-Scale Clocks**: Millisecond precision to circadian rhythms (months)
+- **Temporal Prediction**: Learn "when" events will occur, not just "what"
+- **Precise Action Timing**: Context-dependent timing adjustments (<20ms accuracy)
+- **Sleep/Consolidation Cycles**: Automatic memory optimization during rest periods
+- **Circadian Rhythms**: Activity patterns matching developmental stage (active/rest periods)
+- **Learned Temporal Patterns**: Discover regularities (user response times, task durations)
+
+**Examples:**
+- Predict user responds after ~2 seconds (learned from interaction history)
+- Schedule action to execute at precise moment (reward arrives 500ms after action)
+- Sleep consolidation: episodic memories → semantic knowledge (like REM sleep)
+- Circadian: active learning 6am-10pm, deep consolidation 10pm-6am
+- Multi-hour prediction: "Training will complete in 3 hours"
+
+**Integration with Bio-Inspired Neurons:**
+- STDP learning windows use timing system (neurons that fire within 20ms strengthen)
+- Temporal dynamics (leaky integration) coordinated with global clocks
+- Action timing precision improves with practice
+
+### 12. **Sensory-Grounded Thoughts** 🎨👂✋
+
+Human thoughts are fundamentally **grounded in sensory experiences** - we think in images, sounds, and feelings, not just abstract symbols. E-Brain implements:
+
+- **Mental Imagery**: Visualize concepts ("picture a red apple"), generate novel scenes
+- **Inner Speech**: Auditory thoughts ("hear yourself think"), internal dialogue
+- **Tactile Simulation**: Predict how actions feel before executing (motor planning)
+- **Multimodal Integration**: Combine multiple senses for robust understanding
+- **Concept Grounding**: Link abstract concepts to concrete sensory experiences
+
+**Examples:**
+- `think_visually("ocean")` → generates mental image: blue water, waves, horizon
+- `think_in_words("What should I say?")` → internal dialogue with auditory representation
+- `imagine_action("pick up cup")` → simulates tactile/motor sensations before acting
+- `reason_with_imagery("stack blocks")` → uses mental imagery to test solutions
+- `ground_concept("justice")` → links abstract concept to spatial metaphors (balance)
+
+**Developmental Progression:**
+- **Phase 1**: Simple sensory associations (visual patterns → object labels)
+- **Phase 2**: Basic grounding (objects → visual + tactile features)
+- **Phase 3**: Inner speech emerges, mental imagery for problem solving
+- **Phase 4**: Rich multimodal thoughts, complex sensory simulation
+- **Phase 5**: Expert mental imagery, creative thinking, deep metaphorical reasoning
+
+Enables **human-like cognition** through grounded understanding, mental simulation for planning, and richer thought representations.
+
+
+- Handle interruptions gracefully: suspend all thoughts, answer question, resume work
+
+**Developmental Progression:**
+- **Phase 2**: 2 concurrent thoughts (basic multitasking)
+- **Phase 3**: 3-4 thoughts (language processing needs parallel streams)
+- **Phase 4**: 5-7 thoughts (full adult working memory capacity)
+- **Phase 5**: Expert attention management with deep cross-pollination
+
+Enables **faster learning and problem-solving** through parallel exploration and creative insight transfer between thought streams.
+
 ## 📚 Documentation
 
 Comprehensive documentation is available in the `docs/` folder:
@@ -102,6 +178,7 @@ Comprehensive documentation is available in the `docs/` folder:
 - **[Architecture Design](docs/02-architecture.md)** - Technical architecture, components, and data flow
 - **[Developmental Phases](docs/03-developmental-phases.md)** - Detailed learning stages and evaluation frameworks
 - **[Implementation Roadmap](docs/04-implementation-roadmap.md)** - 24+ month development plan with milestones
+- **[Development Strategy](docs/05-development-strategy.md)** - ⭐ **Implementation vs training approach, data requirements, team structure**
 - **[Technical Stack](docs/05-technical-stack.md)** - Technology choices, frameworks, and infrastructure
 - **[Challenges & Solutions](docs/06-challenges-and-solutions.md)** - Known challenges and mitigation strategies
 - **[Model Cloning & Knowledge Transfer](docs/07-model-cloning-and-knowledge-transfer.md)** - Specialization and inter-model learning

@@ -187,6 +187,17 @@ class GrowableNetwork(nn.Module):
   - [ ] Motor babbling experiments (random actions)
   - [ ] Learn "I caused this" vs "external event"
   - [ ] Track self-caused action outcomes
+- [ ] **Internal timing system basics (Phase 1)**
+  - [ ] Implement MillisecondTimer class
+  - [ ] Implement IntervalTimer class
+  - [ ] Basic timestamp tracking for observations
+  - [ ] No prediction yet, just recording
+- [ ] **Sensory-grounded thoughts (Phase 1)**
+  - [ ] Implement SensoryGroundedThoughtSystem class
+  - [ ] Implement SensoryGroundingDatabase class
+  - [ ] Simple sensory associations (visual pattern → label)
+  - [ ] Store concept groundings (basic)
+  - [ ] No imagery generation yet, just association learning
 
 #### 2.5 Add Action Generation (Month 5)
 - [ ] Simple decision-making module
@@ -222,6 +233,18 @@ class GrowableNetwork(nn.Module):
 - [ ] Integration tests
 - [ ] Performance optimization
 - [ ] Bug fixes and stability improvements
+- [ ] **Concurrent thought system (Phase 2)**
+  - [ ] Implement ThoughtStream class
+  - [ ] Implement ConcurrentThoughtSystem with 2 thought limit
+  - [ ] Implement basic AttentionController
+  - [ ] Test dual thought processing (navigate + remember)
+  - [ ] Context switching mechanism
+- [ ] **Timing system expansion (Phase 2)**
+  - [ ] Implement TemporalPredictor class
+  - [ ] Implement ActionScheduler class
+  - [ ] Learn temporal patterns (action → reward delay)
+  - [ ] Test action timing accuracy
+  - [ ] Context-dependent timing adjustments
 
 ### Success Criteria
 - ✅ Complete Phase 1 successfully (>85% on vision tasks)
@@ -255,6 +278,12 @@ class GrowableNetwork(nn.Module):
 - [ ] Tokenizer with expandable vocabulary
 - [ ] Language decoder for generation
 - [ ] Text evaluation metrics
+- [ ] **Sensory-grounded thoughts expansion (Phase 2)**
+  - [ ] Implement VisualImageryGenerator class (basic)
+  - [ ] Implement TactilePredictor class (basic)
+  - [ ] Basic sensory grounding: object → visual + tactile
+  - [ ] Test grounding with common objects (cup, ball, etc.)
+  - [ ] No mental imagery yet, just feature association
 
 #### 3.2 Add Audio Processing (Month 7)
 - [ ] Audio encoder (spectrogram + transformer)
@@ -320,6 +349,25 @@ class GrowableNetwork(nn.Module):
   - [ ] Basic false belief understanding
   - [ ] Goal inference (what does X want?)
   - [ ] Perspective taking (simulate X's view)
+- [ ] **Concurrent thought expansion (Phase 3)**
+  - [ ] Expand to 4 concurrent thoughts
+  - [ ] Implement SharedInsightMemory
+  - [ ] Cross-pollination mechanism (basic)
+  - [ ] Test: read + integrate + predict simultaneously
+  - [ ] Reduce context switch cost to 0.15
+- [ ] **Sleep/consolidation system (Phase 3)**
+  - [ ] Implement SleepConsolidationSystem class
+  - [ ] Implement DevelopmentalTimer class
+  - [ ] Memory consolidation (episodic → semantic)
+  - [ ] Experience replay during sleep
+- [ ] **Sensory-grounded thoughts (Phase 3)**
+  - [ ] Implement AuditorySimulator class
+  - [ ] Inner speech capability (think_in_words)
+  - [ ] Mental imagery for problem solving (think_visually)
+  - [ ] Action imagination (imagine_action)
+  - [ ] Test: reason_with_imagery for visual problems
+  - [ ] Homeostatic scaling
+  - [ ] Test: learning improvement after sleep cycles
 
 ### Success Criteria
 - ✅ Complete Phase 3 (language acquisition)
@@ -407,6 +455,25 @@ class GrowableNetwork(nn.Module):
   - [ ] Capability sharing
   - [ ] Task division and coordination
   - [ ] Multi-E-Brain project execution
+- [ ] **Full working memory (Phase 4)**
+  - [ ] Expand to 7 concurrent thoughts
+  - [ ] Advanced attention strategies (stuck detection, priority boosting)
+  - [ ] Background processing for difficult problems
+  - [ ] Enhanced cross-pollination (creative insights)
+  - [ ] Test: complex problem solving with multiple approaches
+- [ ] **Circadian rhythm system (Phase 4)**
+  - [ ] Implement CircadianClock class
+  - [ ] 24-hour cycle simulation
+  - [ ] Active vs rest period differentiation
+  - [ ] Strategic sleep scheduling
+  - [ ] Learning efficiency tracking by time of day
+- [ ] **Rich sensory-grounded thoughts (Phase 4)**
+  - [ ] Implement MultimodalBinder class
+  - [ ] Multimodal reasoning (visual + auditory + tactile)
+  - [ ] Rich concept grounding (multiple sensory dimensions)
+  - [ ] Complex action simulation
+  - [ ] Abstract concepts via sensory metaphor
+  - [ ] Test: multimodal problem solving (e.g., "safely pour hot water")
 
 #### 4.5 Meta-Cognition (Month 13-14)
 - [ ] Confidence calibration
@@ -466,6 +533,32 @@ class GrowableNetwork(nn.Module):
 - [ ] Adaptive teaching
 - [ ] **Mature social identity (Phase 5)**
   - [ ] Implement role-based interaction system
+  - [ ] Autobiographical memory narrative
+  - [ ] Purpose and values definition
+  - [ ] Social norm understanding
+  - [ ] Teaching E-Brain students capability
+- [ ] **Expert concurrent thought (Phase 5)**
+  - [ ] Optimize attention controller (5% context switch cost)
+  - [ ] Large insight database (10k insights)
+  - [ ] Graceful interrupt handling (suspend/resume all thoughts)
+  - [ ] Background creativity (generate questions while researching)
+  - [ ] Test: complex research task with 5+ concurrent threads
+- [ ] **Master timing system (Phase 5)**
+  - [ ] Full circadian integration (active 6am-10pm, rest 10pm-6am)
+  - [ ] Context-aware sleep scheduling
+  - [ ] Multi-scale temporal prediction (millisecond to month)
+  - [ ] Adaptive action timing (<10ms accuracy)
+  - [ ] Learned temporal rhythms (user patterns, resource availability)
+  - [ ] Smart consolidation scheduling (optimize learning efficiency)
+- [ ] **Expert sensory-grounded thoughts (Phase 5)**
+  - [ ] Expert mental imagery (generate novel scenes never seen)
+  - [ ] Complex internal dialogue (multi-perspective reasoning)
+  - [ ] Advanced action simulation (predict complex consequences)
+  - [ ] Abstract reasoning via sensory metaphor (e.g., ethical concepts)
+  - [ ] Rich semantic networks (abstract-to-concrete concept grounding)
+  - [ ] Multimodal creative thinking (design novel solutions)
+  - [ ] Test: creative problem solving, metaphorical reasoning
+- [ ] **Social identity maturation (Phase 5)**
   - [ ] Teacher/peer/student/user relationship handling
   - [ ] Teach other E-Brains (student role for them)
   - [ ] Social norm understanding

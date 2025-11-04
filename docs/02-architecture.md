@@ -4,6 +4,910 @@
 
 E-Brain is designed as a modular, dynamically growing neural system that mimics developmental stages of human learning. The architecture emphasizes flexibility, growth capability, and multi-modal integration.
 
+## 0. Foundational Component: Bio-Inspired Neuron
+
+Before diving into system architecture, we define the fundamental building block: an enhanced artificial neuron that mimics key biological properties.
+
+### 0.1 Biological Neurons vs Traditional Artificial Neurons
+
+**Traditional Artificial Neuron (Standard Deep Learning):**
+```python
+# Simple weighted sum + activation
+output = activation(sum(weights * inputs) + bias)
+
+# Limitations:
+# - No temporal dynamics (instantaneous computation)
+# - No local learning (requires global backpropagation)
+# - No dendritic computation (single weighted sum)
+# - No spike timing (continuous values, no discrete spikes)
+# - No plasticity during inference (weights frozen after training)
+# - No neuromodulation (fixed learning rate)
+```
+
+**Biological Neuron Properties We Want to Mimic:**
+
+1. **Temporal Dynamics**: Neurons integrate inputs over time, have refractory periods, generate discrete spikes
+2. **Dendritic Computation**: Dendrites perform local nonlinear computations before reaching soma
+3. **Synaptic Plasticity**: Connections strengthen/weaken based on correlated activity (Hebbian learning, STDP)
+4. **Neuromodulation**: Global signals (dopamine, serotonin) modulate learning rates and connectivity
+5. **Sparse Activation**: Most neurons inactive most of the time (energy efficient)
+6. **Local Learning Rules**: Weight updates based on local pre/post-synaptic activity, not global error signals
+7. **Multiple Timescales**: Fast spikes (milliseconds) to slow structural changes (hours/days)
+8. **Homeostatic Plasticity**: Neurons maintain target firing rates, self-regulate excitability
+
+### 0.2 Enhanced Bio-Inspired Neuron Design
+
+Our neuron design balances biological realism with computational practicality:
+
+```python
+import torch
+import torch.nn as nn
+import numpy as np
+
+class BioInspiredNeuron(nn.Module):
+    """
+    Enhanced artificial neuron mimicking key biological properties.
+    
+    Components:
+    1. Dendritic branches: Local nonlinear computation
+    2. Soma: Integration and spike generation
+    3. Axon: Output transmission with temporal dynamics
+    4. Synapses: Plastic connections with local learning rules
+    5. Neuromodulation: Global learning rate modulation
+    
+    Key Features:
+    - Temporal dynamics (leaky integration)
+    - Spike generation (optional, can be continuous or spiking)
+    - Local plasticity (STDP, Hebbian learning)
+    - Homeostatic regulation
+    - Sparse activation
+    """
+    
+    def __init__(
+        self,
+        input_dim: int,
+        num_dendrites: int = 4,
+        dendrite_dim: int = None,
+        activation: str = 'relu',
+        spiking: bool = False,
+        spike_threshold: float = 1.0,
+        leak_rate: float = 0.9,
+        refractory_period: int = 2,
+        enable_stdp: bool = True,
+        enable_homeostasis: bool = True,
+        target_firing_rate: float = 0.1
+    ):
+        super().__init__()
+        
+        # Dendritic branches
+        self.num_dendrites = num_dendrites
+        self.dendrite_dim = dendrite_dim or (input_dim // num_dendrites)
+        
+        # Each dendrite gets a subset of inputs and does local computation
+        self.dendrites = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(self.dendrite_dim, self.dendrite_dim),
+                nn.ReLU(),  # Local nonlinearity
+                nn.Linear(self.dendrite_dim, self.dendrite_dim)
+            )
+            for _ in range(num_dendrites)
+        ])
+        
+        # Soma integration
+        total_dendrite_output = num_dendrites * self.dendrite_dim
+        self.soma_weights = nn.Linear(total_dendrite_output, 1, bias=True)
+        
+        # Temporal dynamics
+        self.leak_rate = leak_rate  # How fast membrane potential decays
+        self.membrane_potential = 0.0  # Current potential
+        self.register_buffer('voltage_history', torch.zeros(100))  # Track history
+        
+        # Spiking mechanism
+        self.spiking = spiking
+        self.spike_threshold = spike_threshold
+        self.refractory_period = refractory_period
+        self.refractory_counter = 0
+        self.last_spike_time = -1000  # Initialize far in past
+        
+        # Plasticity
+        self.enable_stdp = enable_stdp
+        self.stdp_lr = 0.001  # Local learning rate
+        self.trace_decay = 0.95  # Eligibility trace decay
+        
+        # Store pre-synaptic traces for STDP
+        self.register_buffer('pre_trace', torch.zeros(input_dim))
+        self.register_buffer('post_trace', torch.tensor(0.0))
+        
+        # Homeostatic plasticity
+        self.enable_homeostasis = enable_homeostasis
+        self.target_firing_rate = target_firing_rate
+        self.register_buffer('actual_firing_rate', torch.tensor(0.0))
+        self.homeostatic_scale = 1.0
+        
+        # Neuromodulation (set externally)
+        self.neuromodulation_signal = 1.0  # Default no modulation
+        
+        # Activation
+        self.activation = self._get_activation(activation)
+        
+        # Sparsity
+        self.activity_count = 0
+        self.total_steps = 0
+        
+    def _get_activation(self, name):
+        activations = {
+            'relu': nn.ReLU(),
+            'tanh': nn.Tanh(),
+            'sigmoid': nn.Sigmoid(),
+            'swish': nn.SiLU()
+        }
+        return activations.get(name, nn.ReLU())
+    
+    def forward(self, x, timestep=0):
+        """
+        Forward pass with temporal dynamics.
+        
+        Args:
+            x: Input tensor [batch_size, input_dim]
+            timestep: Current time step (for temporal dynamics)
+            
+        Returns:
+            output: Neuron output (spike or continuous value)
+            auxiliary: Dict with additional info (potential, spike, etc.)
+        """
+        batch_size = x.shape[0]
+        
+        # 1. DENDRITIC COMPUTATION
+        # Split input across dendritic branches
+        branch_size = x.shape[1] // self.num_dendrites
+        dendrite_outputs = []
+        
+        for i, dendrite in enumerate(self.dendrites):
+            start_idx = i * branch_size
+            end_idx = start_idx + branch_size if i < self.num_dendrites - 1 else x.shape[1]
+            branch_input = x[:, start_idx:end_idx]
+            
+            # Pad if necessary
+            if branch_input.shape[1] < self.dendrite_dim:
+                padding = torch.zeros(
+                    batch_size, 
+                    self.dendrite_dim - branch_input.shape[1],
+                    device=x.device
+                )
+                branch_input = torch.cat([branch_input, padding], dim=1)
+            
+            # Local dendritic computation
+            dendrite_out = dendrite(branch_input)
+            dendrite_outputs.append(dendrite_out)
+        
+        # Combine dendritic outputs
+        dendrite_combined = torch.cat(dendrite_outputs, dim=1)
+        
+        # 2. SOMA INTEGRATION
+        # Compute somatic current
+        somatic_current = self.soma_weights(dendrite_combined).squeeze(-1)
+        
+        # Apply homeostatic scaling
+        somatic_current = somatic_current * self.homeostatic_scale
+        
+        # 3. TEMPORAL DYNAMICS
+        # Leaky integration (simplified leaky integrate-and-fire)
+        if isinstance(self.membrane_potential, float):
+            self.membrane_potential = torch.zeros(batch_size, device=x.device)
+        
+        # Decay existing potential
+        self.membrane_potential = self.leak_rate * self.membrane_potential + somatic_current
+        
+        # 4. SPIKE GENERATION or CONTINUOUS OUTPUT
+        if self.spiking:
+            # Spiking neuron
+            spike = torch.zeros_like(self.membrane_potential)
+            
+            # Check refractory period
+            if self.refractory_counter <= 0:
+                # Generate spike if above threshold
+                spike_mask = self.membrane_potential > self.spike_threshold
+                spike[spike_mask] = 1.0
+                
+                # Reset membrane potential where spike occurred
+                self.membrane_potential[spike_mask] = 0.0
+                
+                # Set refractory period
+                if spike.sum() > 0:
+                    self.refractory_counter = self.refractory_period
+                    self.last_spike_time = timestep
+            else:
+                self.refractory_counter -= 1
+            
+            output = spike
+            
+            # Update firing rate
+            if self.enable_homeostasis:
+                self.actual_firing_rate = 0.99 * self.actual_firing_rate + 0.01 * spike.mean()
+        else:
+            # Continuous neuron (standard)
+            output = self.activation(self.membrane_potential)
+        
+        # 5. UPDATE PLASTICITY TRACES
+        if self.training and self.enable_stdp:
+            # Update pre-synaptic trace (input)
+            self.pre_trace = self.trace_decay * self.pre_trace + x.mean(0)
+            
+            # Update post-synaptic trace (output)
+            self.post_trace = self.trace_decay * self.post_trace + output.mean()
+        
+        # 6. TRACK SPARSITY
+        self.total_steps += 1
+        self.activity_count += (output > 0).float().mean().item()
+        
+        # Auxiliary information
+        auxiliary = {
+            'membrane_potential': self.membrane_potential.clone(),
+            'spike': output if self.spiking else None,
+            'dendrite_outputs': dendrite_outputs,
+            'sparsity': self.activity_count / max(self.total_steps, 1),
+            'firing_rate': self.actual_firing_rate.item() if self.spiking else None
+        }
+        
+        return output, auxiliary
+    
+    def apply_stdp(self, reward_signal=1.0):
+        """
+        Apply Spike-Timing-Dependent Plasticity (STDP).
+        
+        Hebbian rule: Neurons that fire together, wire together.
+        - If pre fires before post: strengthen (LTP - Long-Term Potentiation)
+        - If post fires before pre: weaken (LTD - Long-Term Depression)
+        
+        Modulated by reward signal (reward-modulated STDP).
+        """
+        if not self.enable_stdp or not self.training:
+            return
+        
+        # STDP update for soma weights
+        # Δw = η * (post_trace * pre_trace) * reward * neuromodulation
+        with torch.no_grad():
+            for name, param in self.named_parameters():
+                if 'soma_weights.weight' in name:
+                    # Hebbian update: correlate pre and post activity
+                    # Outer product would be ideal, but simplified here
+                    stdp_update = (
+                        self.stdp_lr * 
+                        self.post_trace * 
+                        reward_signal *
+                        self.neuromodulation_signal
+                    )
+                    
+                    # Apply update (simplified - would need proper pre-post correlation)
+                    param.data += stdp_update * torch.randn_like(param) * 0.01
+    
+    def apply_homeostasis(self):
+        """
+        Homeostatic plasticity: Maintain target firing rate.
+        
+        If firing too much: decrease excitability (scale down weights)
+        If firing too little: increase excitability (scale up weights)
+        """
+        if not self.enable_homeostasis or not self.spiking:
+            return
+        
+        # Adjust homeostatic scale based on firing rate
+        rate_error = self.target_firing_rate - self.actual_firing_rate.item()
+        
+        # Slowly adjust scale (slow homeostatic timescale)
+        self.homeostatic_scale += 0.0001 * rate_error
+        self.homeostatic_scale = np.clip(self.homeostatic_scale, 0.5, 2.0)
+    
+    def set_neuromodulation(self, signal: float):
+        """
+        Set neuromodulation signal (e.g., dopamine level).
+        Affects learning rate and plasticity.
+        
+        signal > 1.0: Enhanced learning (reward)
+        signal < 1.0: Reduced learning (punishment)
+        signal = 1.0: Baseline
+        """
+        self.neuromodulation_signal = signal
+    
+    def reset_state(self):
+        """Reset temporal state (membrane potential, traces, etc.)"""
+        self.membrane_potential = 0.0
+        self.pre_trace.zero_()
+        self.post_trace.zero_()
+        self.refractory_counter = 0
+        self.last_spike_time = -1000
+    
+    def get_sparsity(self):
+        """Get activation sparsity (fraction of time neuron is active)"""
+        return self.activity_count / max(self.total_steps, 1)
+```
+
+### 0.3 Key Features Explained
+
+#### **1. Dendritic Computation**
+```python
+# Traditional: Single weighted sum
+output = activation(W @ x + b)
+
+# Bio-inspired: Multiple dendritic branches with local computation
+dendrite_1 = nonlinear(W1 @ x[0:n])
+dendrite_2 = nonlinear(W2 @ x[n:2n])
+# ... combine at soma
+```
+
+**Why:** Dendrites in real neurons compute locally before reaching soma, enabling more complex input integration patterns.
+
+#### **2. Temporal Dynamics (Leaky Integration)**
+```python
+# Membrane potential decays over time
+V(t) = leak_rate * V(t-1) + input_current(t)
+
+# Biological: τ dV/dt = -V + I
+# Discrete: V[t] = α*V[t-1] + I[t]
+```
+
+**Why:** Real neurons integrate inputs over time, not instantaneously. Enables temporal coding and sequence learning.
+
+#### **3. Spike-Timing-Dependent Plasticity (STDP)**
+```python
+# Hebbian learning with timing
+if pre_spike_before_post:
+    Δw = +A * exp(-(t_post - t_pre)/τ)  # LTP: strengthen
+elif post_spike_before_pre:
+    Δw = -A * exp(-(t_pre - t_post)/τ)  # LTD: weaken
+```
+
+**Why:** Causality matters - if presynaptic spike causes postsynaptic spike, strengthen connection. Core of biological learning.
+
+#### **4. Homeostatic Plasticity**
+```python
+# Maintain target firing rate
+if actual_rate > target_rate:
+    scale_down_excitability()
+elif actual_rate < target_rate:
+    scale_up_excitability()
+```
+
+**Why:** Prevents runaway excitation or silence. Neurons self-regulate to maintain useful activity levels.
+
+#### **5. Neuromodulation**
+```python
+# Global signal modulates learning
+learning_rate_effective = base_lr * neuromodulation_signal
+
+# Examples:
+# dopamine_high (reward) → learn faster
+# dopamine_low (punishment) → learn slower
+```
+
+**Why:** Enables reward-modulated learning, attention, motivation - critical for reinforcement learning.
+
+### 0.4 Usage in E-Brain Architecture
+
+**Layer Construction:**
+```python
+class BioInspiredLayer(nn.Module):
+    """Layer of bio-inspired neurons"""
+    
+    def __init__(self, input_dim, output_dim, neuron_config):
+        super().__init__()
+        self.neurons = nn.ModuleList([
+            BioInspiredNeuron(input_dim, **neuron_config)
+            for _ in range(output_dim)
+        ])
+    
+    def forward(self, x, timestep=0):
+        outputs = []
+        auxiliaries = []
+        
+        for neuron in self.neurons:
+            out, aux = neuron(x, timestep)
+            outputs.append(out)
+            auxiliaries.append(aux)
+        
+        return torch.stack(outputs, dim=1), auxiliaries
+    
+    def apply_plasticity(self, reward_signal):
+        """Apply local learning rules across all neurons"""
+        for neuron in self.neurons:
+            neuron.apply_stdp(reward_signal)
+            neuron.apply_homeostasis()
+```
+
+**Progressive Complexity:**
+- **Phase 1**: Use continuous mode (spiking=False) - similar to standard neurons, easier training
+- **Phase 2-3**: Enable temporal dynamics (leak_rate < 1.0) - learn sequences
+- **Phase 4**: Enable STDP (enable_stdp=True) - local learning alongside backprop
+- **Phase 5**: Full spiking mode (spiking=True) - maximum biological realism
+
+### 0.5 Comparison Table
+
+| Feature | Traditional Neuron | Bio-Inspired Neuron | Biological Neuron |
+|---------|-------------------|---------------------|-------------------|
+| Computation | Weighted sum + activation | Dendritic branches + soma | Dendritic computation + soma |
+| Temporal | Instantaneous | Leaky integration | Complex dynamics |
+| Output | Continuous value | Continuous or spikes | Action potentials (spikes) |
+| Learning | Backpropagation (global) | Backprop + STDP (local) | STDP, LTP, LTD (local) |
+| Plasticity | Training phase only | Online (continuous) | Continuous lifelong |
+| Homeostasis | None | Target firing rate | Multiple mechanisms |
+| Neuromodulation | Learning rate (manual) | Signal-based (automatic) | Neurotransmitters (dopamine, etc.) |
+| Sparsity | Dense activation | Tracked and optimized | Naturally sparse (~1%) |
+
+### 0.6 Advantages for E-Brain
+
+1. **Temporal Learning**: Better at sequences, time series, temporal credit assignment
+2. **Local Plasticity**: Can learn online during inference, not just training
+3. **Energy Efficiency**: Sparse activation reduces computation (like real brain)
+4. **Biological Plausibility**: More interpretable, closer to neuroscience
+5. **Neuromodulation**: Natural integration with reward system (dopamine-like signals)
+6. **Homeostasis**: Self-regulating, prevents overfitting or dead neurons
+7. **Developmental Growth**: Easier to add/remove neurons dynamically
+
+### 0.7 Implementation Strategy
+
+**Hybrid Approach** (Practical for E-Brain):
+
+```python
+# Start simple, add complexity over developmental phases
+config_phase1 = {
+    'num_dendrites': 1,  # Simple (essentially traditional neuron)
+    'spiking': False,
+    'enable_stdp': False,
+    'leak_rate': 1.0  # No temporal dynamics yet
+}
+
+config_phase3 = {
+    'num_dendrites': 4,  # Add dendritic computation
+    'spiking': False,  # Still continuous for compatibility
+    'enable_stdp': True,  # Enable local learning
+    'leak_rate': 0.9  # Add temporal dynamics
+}
+
+config_phase5 = {
+    'num_dendrites': 8,  # Full dendritic computation
+    'spiking': True,  # Full spiking mode
+    'enable_stdp': True,
+    'enable_homeostasis': True,
+    'leak_rate': 0.95
+}
+```
+
+**Trade-offs:**
+- **More biological = More computation**: Spiking neurons are slower than continuous
+- **Local learning = Less efficient**: STDP trains slower than backprop
+- **Solution**: Use hybrid (backprop for fast learning, STDP for online adaptation)
+
+This bio-inspired neuron forms the foundation for E-Brain's neural architecture, enabling biological realism while maintaining computational practicality.
+
+### 0.8 Neuron Growth, Pruning, and Reorganization
+
+E-Brain's neurons can be dynamically spawned, pruned, and reorganized based on learning needs, mimicking neurogenesis and synaptic pruning in the developing brain.
+
+```python
+class NeurogenesisController:
+    """
+    Controls dynamic neuron birth, death, and synaptic reorganization.
+    
+    Inspired by:
+    - Neurogenesis: Birth of new neurons (hippocampus, olfactory bulb)
+    - Synaptic pruning: Removal of unused connections (especially adolescence)
+    - Hebbian rewiring: "Neurons that fire together, wire together"
+    - Homeostatic regulation: Maintain network stability
+    """
+    
+    def __init__(self, layer, growth_config):
+        self.layer = layer
+        self.growth_threshold = growth_config.get('growth_threshold', 0.85)
+        self.prune_threshold = growth_config.get('prune_threshold', 0.01)
+        self.max_neurons = growth_config.get('max_neurons', 1000)
+        self.min_neurons = growth_config.get('min_neurons', 10)
+        
+        # Track neuron importance and usage
+        self.neuron_importance = {}
+        self.neuron_age = {}
+        self.connection_strength = {}
+        
+    def should_spawn_neuron(self, layer_stats):
+        """
+        Decide if new neuron should be created.
+        
+        Spawn when:
+        1. Layer capacity saturated (all neurons active frequently)
+        2. High error on specific input patterns
+        3. Discovering new concept that needs representation
+        4. Developmental signal (phase transition)
+        """
+        # Capacity check
+        capacity = layer_stats['utilization']
+        if capacity > self.growth_threshold:
+            return True, "capacity_saturated"
+        
+        # Error check
+        if layer_stats['recent_error'] > layer_stats['avg_error'] * 1.5:
+            return True, "high_error"
+        
+        # Concept discovery (from concept hierarchy)
+        if layer_stats.get('new_concept_detected', False):
+            return True, "new_concept"
+        
+        # Developmental milestone
+        if layer_stats.get('phase_transition', False):
+            return True, "developmental"
+        
+        return False, None
+    
+    def spawn_neuron(self, reason, parent_neurons=None):
+        """
+        Create new neuron and integrate into layer.
+        
+        Strategies:
+        1. Random initialization: Start from scratch
+        2. Clone from parent: Copy similar neuron + add noise
+        3. Interpolate: Average of multiple parent neurons
+        4. Specialized: Initialize for specific feature
+        """
+        # Check capacity
+        if len(self.layer.neurons) >= self.max_neurons:
+            print(f"Max neurons reached ({self.max_neurons})")
+            return None
+        
+        # Create neuron config (inherit from layer)
+        neuron_config = self.layer.base_neuron_config.copy()
+        
+        if reason == "capacity_saturated":
+            # Clone most active neuron + add noise
+            most_active = self._find_most_active_neuron()
+            new_neuron = self._clone_neuron(most_active, noise_std=0.1)
+            
+        elif reason == "high_error":
+            # Create specialized neuron for hard patterns
+            new_neuron = BioInspiredNeuron(
+                input_dim=self.layer.input_dim,
+                **neuron_config
+            )
+            # Initialize with larger weights for stronger initial signal
+            for param in new_neuron.parameters():
+                param.data *= 1.5
+                
+        elif reason == "new_concept":
+            # Specialized for new concept detection
+            new_neuron = BioInspiredNeuron(
+                input_dim=self.layer.input_dim,
+                num_dendrites=8,  # More dendrites for complex concept
+                **neuron_config
+            )
+            
+        else:  # developmental or default
+            # Standard initialization
+            new_neuron = BioInspiredNeuron(
+                input_dim=self.layer.input_dim,
+                **neuron_config
+            )
+        
+        # Add to layer
+        neuron_id = len(self.layer.neurons)
+        self.layer.neurons.append(new_neuron)
+        
+        # Track metadata
+        self.neuron_age[neuron_id] = 0
+        self.neuron_importance[neuron_id] = 0.5  # Start with medium importance
+        
+        # Connect to existing neurons (synaptic wiring)
+        self._wire_new_neuron(neuron_id, parent_neurons)
+        
+        print(f"✨ Spawned neuron {neuron_id} (reason: {reason})")
+        return new_neuron
+    
+    def should_prune_neuron(self, neuron_id):
+        """
+        Decide if neuron should be removed.
+        
+        Prune when:
+        1. Low importance (rarely activated)
+        2. Redundant with other neurons (high correlation)
+        3. Dead/silent (zero activity for long time)
+        4. Developmental cleanup (phase transition)
+        """
+        importance = self.neuron_importance.get(neuron_id, 0.5)
+        age = self.neuron_age.get(neuron_id, 0)
+        
+        # Don't prune young neurons (give them time to learn)
+        if age < 1000:  # Time steps
+            return False, None
+        
+        # Check importance
+        if importance < self.prune_threshold:
+            return True, "low_importance"
+        
+        # Check if dead
+        neuron = self.layer.neurons[neuron_id]
+        if neuron.get_sparsity() < 0.001:  # Active < 0.1% of time
+            return True, "dead_neuron"
+        
+        # Check redundancy
+        if self._is_redundant(neuron_id):
+            return True, "redundant"
+        
+        return False, None
+    
+    def prune_neuron(self, neuron_id, reason):
+        """
+        Remove neuron from layer and rewire connections.
+        """
+        if len(self.layer.neurons) <= self.min_neurons:
+            print(f"Min neurons reached ({self.min_neurons}), not pruning")
+            return False
+        
+        # Remove neuron
+        pruned_neuron = self.layer.neurons.pop(neuron_id)
+        
+        # Clean up metadata
+        del self.neuron_age[neuron_id]
+        del self.neuron_importance[neuron_id]
+        
+        # Rewire connections (redistribute to remaining neurons)
+        self._rewire_after_pruning(neuron_id)
+        
+        print(f"✂️ Pruned neuron {neuron_id} (reason: {reason})")
+        return True
+    
+    def update_importance(self, neuron_id, activity, error_gradient):
+        """
+        Update neuron importance based on activity and contribution.
+        
+        Importance factors:
+        1. Activity level (how often active)
+        2. Error gradient (contribution to learning)
+        3. Connection strength (importance to downstream)
+        4. Age (newer neurons get benefit of doubt)
+        """
+        # Exponential moving average
+        alpha = 0.01
+        
+        # Activity contribution
+        activity_score = activity / (1.0 + activity)  # Normalize
+        
+        # Gradient contribution (how much it helps learning)
+        gradient_score = abs(error_gradient) / (1.0 + abs(error_gradient))
+        
+        # Age bonus (newer neurons get higher initial importance)
+        age = self.neuron_age.get(neuron_id, 0)
+        age_bonus = np.exp(-age / 10000)  # Decays over 10k steps
+        
+        # Combined importance
+        new_importance = (
+            0.4 * activity_score +
+            0.4 * gradient_score +
+            0.2 * age_bonus
+        )
+        
+        # Update with EMA
+        old_importance = self.neuron_importance.get(neuron_id, 0.5)
+        self.neuron_importance[neuron_id] = (
+            (1 - alpha) * old_importance + alpha * new_importance
+        )
+        
+        # Increment age
+        self.neuron_age[neuron_id] = age + 1
+    
+    def reorganize_connections(self):
+        """
+        Hebbian rewiring: Strengthen frequently co-active connections,
+        weaken rarely co-active connections.
+        
+        "Neurons that fire together, wire together"
+        """
+        # Track co-activation
+        activation_history = self._get_recent_activations(window=100)
+        
+        # Compute pairwise correlations
+        correlations = np.corrcoef(activation_history.T)
+        
+        for i in range(len(self.layer.neurons)):
+            for j in range(i + 1, len(self.layer.neurons)):
+                correlation = correlations[i, j]
+                
+                # Strengthen high-correlation connections
+                if correlation > 0.7:
+                    self._strengthen_connection(i, j, amount=0.01)
+                
+                # Weaken low-correlation connections
+                elif correlation < 0.1:
+                    self._weaken_connection(i, j, amount=0.01)
+        
+        print(f"🔄 Reorganized connections (Hebbian rewiring)")
+    
+    def _clone_neuron(self, source_neuron, noise_std=0.1):
+        """Clone neuron with small random perturbations"""
+        # Create new neuron with same config
+        new_neuron = BioInspiredNeuron(
+            input_dim=source_neuron.soma_weights.in_features,
+            num_dendrites=source_neuron.num_dendrites,
+            spiking=source_neuron.spiking
+        )
+        
+        # Copy weights with noise
+        with torch.no_grad():
+            for new_param, source_param in zip(
+                new_neuron.parameters(),
+                source_neuron.parameters()
+            ):
+                new_param.data = source_param.data + torch.randn_like(source_param) * noise_std
+        
+        return new_neuron
+    
+    def _wire_new_neuron(self, neuron_id, parent_neurons):
+        """Connect new neuron to existing network"""
+        if parent_neurons is None:
+            # Random connections (small initial weights)
+            return
+        
+        # Connect to parent neurons with higher initial strength
+        for parent_id in parent_neurons:
+            self.connection_strength[(parent_id, neuron_id)] = 0.5
+            self.connection_strength[(neuron_id, parent_id)] = 0.5
+    
+    def _is_redundant(self, neuron_id):
+        """Check if neuron is redundant with others"""
+        # Simplified: Check activity correlation
+        activation_history = self._get_recent_activations(window=100)
+        
+        if activation_history.shape[0] < 100:
+            return False  # Not enough data
+        
+        neuron_activity = activation_history[:, neuron_id]
+        
+        # Check correlation with all other neurons
+        for other_id in range(len(self.layer.neurons)):
+            if other_id == neuron_id:
+                continue
+            
+            other_activity = activation_history[:, other_id]
+            correlation = np.corrcoef(neuron_activity, other_activity)[0, 1]
+            
+            # If highly correlated, it's redundant
+            if correlation > 0.95:
+                return True
+        
+        return False
+    
+    def _get_recent_activations(self, window=100):
+        """Get recent activation history for all neurons"""
+        # Placeholder - would track in practice
+        return np.random.rand(window, len(self.layer.neurons))
+    
+    def _find_most_active_neuron(self):
+        """Find neuron with highest activity"""
+        max_activity = 0
+        most_active = None
+        
+        for neuron in self.layer.neurons:
+            activity = neuron.get_sparsity()
+            if activity > max_activity:
+                max_activity = activity
+                most_active = neuron
+        
+        return most_active
+    
+    def _strengthen_connection(self, neuron_i, neuron_j, amount):
+        """Strengthen synaptic connection between neurons"""
+        key = (neuron_i, neuron_j)
+        current = self.connection_strength.get(key, 0.1)
+        self.connection_strength[key] = min(1.0, current + amount)
+    
+    def _weaken_connection(self, neuron_i, neuron_j, amount):
+        """Weaken synaptic connection between neurons"""
+        key = (neuron_i, neuron_j)
+        current = self.connection_strength.get(key, 0.1)
+        self.connection_strength[key] = max(0.0, current - amount)
+    
+    def _rewire_after_pruning(self, pruned_id):
+        """Redistribute connections after neuron removal"""
+        # Remove all connections involving pruned neuron
+        to_remove = []
+        for key in self.connection_strength.keys():
+            if pruned_id in key:
+                to_remove.append(key)
+        
+        for key in to_remove:
+            del self.connection_strength[key]
+```
+
+**Growth Timeline Across Development:**
+
+```python
+# Phase 1 (Months 1-4): Rapid growth
+# - Start: 100 neurons per layer
+# - Add ~20 new neurons per month
+# - Minimal pruning (learning phase)
+
+# Phase 2 (Months 5-8): Continued growth + early pruning
+# - Add ~10 new neurons per month
+# - Begin pruning dead/redundant neurons
+# - Net growth: ~5 neurons per month
+
+# Phase 3 (Months 9-14): Balanced growth and pruning
+# - Add ~5 new neurons per month
+# - Prune ~3 neurons per month
+# - Net growth: ~2 neurons per month
+# - Reorganize connections (Hebbian rewiring)
+
+# Phase 4 (Months 15-20): Refinement
+# - Add ~2 new neurons per month
+# - Prune ~2 neurons per month
+# - Net growth: ~0 (stable)
+# - Focus on connection optimization
+
+# Phase 5 (Months 21+): Mature, specialized
+# - Minimal growth (only for new domains)
+# - Strategic pruning for efficiency
+# - Heavy connection reorganization
+# - Optimize for task-specific efficiency
+```
+
+**Integration with Developmental Phases:**
+
+```python
+class DevelopmentalNeuronManager:
+    """Manage neuron growth according to developmental stage"""
+    
+    def __init__(self):
+        self.phase = 0  # Current developmental phase
+        self.neurogenesis_controllers = {}  # Per-layer controllers
+        
+    def set_phase(self, phase):
+        """Update developmental phase and adjust growth parameters"""
+        self.phase = phase
+        
+        if phase == 1:
+            # Infancy: Rapid neuron proliferation
+            self._configure_rapid_growth()
+        elif phase == 2:
+            # Toddler: Continued growth, early pruning
+            self._configure_balanced_growth()
+        elif phase == 3:
+            # Child: Selective growth, active pruning
+            self._configure_selective_growth()
+        elif phase == 4:
+            # Adolescent: Refinement, heavy pruning
+            self._configure_refinement()
+        elif phase == 5:
+            # Adult: Stability, minimal changes
+            self._configure_mature()
+    
+    def _configure_rapid_growth(self):
+        """Phase 1: Rapid proliferation"""
+        for controller in self.neurogenesis_controllers.values():
+            controller.growth_threshold = 0.7  # Lower threshold (grow easily)
+            controller.prune_threshold = 0.001  # High threshold (prune rarely)
+    
+    def _configure_balanced_growth(self):
+        """Phase 2: Balanced"""
+        for controller in self.neurogenesis_controllers.values():
+            controller.growth_threshold = 0.8
+            controller.prune_threshold = 0.01
+    
+    def _configure_selective_growth(self):
+        """Phase 3: Selective"""
+        for controller in self.neurogenesis_controllers.values():
+            controller.growth_threshold = 0.85
+            controller.prune_threshold = 0.02
+    
+    def _configure_refinement(self):
+        """Phase 4: Refinement (adolescent pruning)"""
+        for controller in self.neurogenesis_controllers.values():
+            controller.growth_threshold = 0.9  # Higher threshold (grow rarely)
+            controller.prune_threshold = 0.05  # Lower threshold (prune aggressively)
+    
+    def _configure_mature(self):
+        """Phase 5: Mature stability"""
+        for controller in self.neurogenesis_controllers.values():
+            controller.growth_threshold = 0.95  # Very high (almost no growth)
+            controller.prune_threshold = 0.1  # Aggressive pruning
+```
+
+This neurogenesis system enables E-Brain to dynamically adapt its structure based on learning needs, mimicking the brain's developmental trajectory from rapid growth in infancy to selective refinement in adulthood.
+
 ## System Architecture Diagram
 
 ```
@@ -449,6 +1353,2143 @@ class DynamicCore:
 - **Adaptability:** Depth adjusts to task complexity
 - **Efficiency:** Fast path for simple tasks, deep reasoning when needed
 - **Human-like:** Mimics human deliberate thinking process
+
+#### Concurrent Thought Processing System
+
+E-Brain can maintain and switch between multiple concurrent "thoughts" or reasoning threads, mimicking the brain's ability to work on multiple problems simultaneously.
+
+```python
+class ConcurrentThoughtSystem:
+    """
+    Manages multiple parallel thought streams (reasoning threads).
+    
+    Inspired by human cognitive capabilities:
+    - Working memory slots (4-7 concurrent thoughts)
+    - Rapid context switching (100-200ms in humans)
+    - Background processing (subconscious thoughts)
+    - Thought persistence (suspend/resume)
+    - Cross-pollination (insights from one thought help another)
+    
+    Examples:
+    - Solve math problem while reading text
+    - Multiple hypothesis exploration in parallel
+    - Background: "cook" difficult problems while working on easier ones
+    - Creative: combine insights from different thought streams
+    """
+    
+    def __init__(
+        self,
+        max_concurrent_thoughts=7,  # Working memory limit
+        context_switch_cost=0.1,  # Time/compute cost to switch
+        background_slots=3  # How many can run in background
+    ):
+        self.max_concurrent_thoughts = max_concurrent_thoughts
+        self.context_switch_cost = context_switch_cost
+        self.background_slots = background_slots
+        
+        # Active thought streams
+        self.thoughts = {}  # thought_id -> ThoughtStream
+        self.focused_thought = None  # Currently active thought
+        self.background_thoughts = []  # Thoughts running in background
+        
+        # Attention controller
+        self.attention_controller = AttentionController()
+        
+        # Shared memory for cross-pollination
+        self.shared_insight_memory = SharedInsightMemory()
+        
+        # Performance tracking
+        self.thought_creation_count = 0
+        self.context_switches = 0
+        
+    def create_thought(self, task, initial_state, priority="medium"):
+        """
+        Spawn a new thought stream for a task.
+        
+        Args:
+            task: Task description/goal
+            initial_state: Starting state for reasoning
+            priority: "high", "medium", "low"
+            
+        Returns:
+            thought_id: Unique identifier for this thought
+        """
+        # Check capacity
+        if len(self.thoughts) >= self.max_concurrent_thoughts:
+            # Need to suspend lowest priority thought
+            self._suspend_lowest_priority_thought()
+        
+        # Create new thought stream
+        thought_id = f"thought_{self.thought_creation_count}"
+        self.thought_creation_count += 1
+        
+        thought = ThoughtStream(
+            thought_id=thought_id,
+            task=task,
+            initial_state=initial_state,
+            priority=priority,
+            shared_memory=self.shared_insight_memory
+        )
+        
+        self.thoughts[thought_id] = thought
+        
+        # Decide placement: focused, background, or suspended
+        if self.focused_thought is None:
+            self.focused_thought = thought_id
+            thought.set_mode("focused")
+        elif len(self.background_thoughts) < self.background_slots:
+            self.background_thoughts.append(thought_id)
+            thought.set_mode("background")
+        else:
+            thought.set_mode("suspended")
+        
+        return thought_id
+    
+    def step(self, timestep):
+        """
+        Execute one step of concurrent thought processing.
+        
+        - Focused thought gets most compute
+        - Background thoughts get minimal compute (keep alive)
+        - Suspended thoughts inactive
+        - Periodically check if attention should switch
+        """
+        results = {}
+        
+        # 1. Process focused thought (full compute)
+        if self.focused_thought:
+            focused = self.thoughts[self.focused_thought]
+            result = focused.step(compute_budget=1.0)
+            results[self.focused_thought] = result
+            
+            # Check if focused thought completed
+            if focused.is_completed():
+                self._handle_completion(self.focused_thought)
+        
+        # 2. Process background thoughts (limited compute)
+        for thought_id in self.background_thoughts[:]:
+            thought = self.thoughts.get(thought_id)
+            if thought:
+                # Background gets 10% compute
+                result = thought.step(compute_budget=0.1)
+                results[thought_id] = result
+                
+                # Check completion
+                if thought.is_completed():
+                    self._handle_completion(thought_id)
+        
+        # 3. Decide if attention should switch
+        if timestep % 10 == 0:  # Check every 10 steps
+            should_switch, new_focus = self.attention_controller.should_switch_attention(
+                thoughts=self.thoughts,
+                current_focus=self.focused_thought
+            )
+            
+            if should_switch and new_focus != self.focused_thought:
+                self._switch_attention(new_focus)
+        
+        # 4. Cross-pollinate insights
+        if timestep % 50 == 0:  # Periodically
+            self._cross_pollinate_insights()
+        
+        return results
+    
+    def _switch_attention(self, new_focus_id):
+        """
+        Switch attention from current focus to new thought.
+        
+        Context switching:
+        - Save current thought state
+        - Load new thought state
+        - Adjust priority queues
+        """
+        if self.focused_thought == new_focus_id:
+            return  # Already focused
+        
+        # Save current focus to background
+        if self.focused_thought:
+            old_thought = self.thoughts[self.focused_thought]
+            old_thought.set_mode("background")
+            self.background_thoughts.append(self.focused_thought)
+        
+        # Promote new focus
+        new_thought = self.thoughts[new_focus_id]
+        new_thought.set_mode("focused")
+        
+        # Remove from background if present
+        if new_focus_id in self.background_thoughts:
+            self.background_thoughts.remove(new_focus_id)
+        
+        self.focused_thought = new_focus_id
+        self.context_switches += 1
+        
+        # Context switch cost (simulate)
+        time.sleep(self.context_switch_cost)
+    
+    def _cross_pollinate_insights(self):
+        """
+        Share insights between thought streams.
+        
+        Examples:
+        - Thought A discovers pattern → share with Thought B
+        - Thought B solving similar problem → transfer strategy
+        - Creative combination of ideas from multiple streams
+        """
+        # Collect insights from all active thoughts
+        insights = []
+        for thought_id, thought in self.thoughts.items():
+            if thought.mode != "suspended":
+                thought_insights = thought.extract_insights()
+                insights.extend(thought_insights)
+        
+        # Store in shared memory
+        for insight in insights:
+            self.shared_insight_memory.store(insight)
+        
+        # Distribute relevant insights to other thoughts
+        for thought_id, thought in self.thoughts.items():
+            relevant_insights = self.shared_insight_memory.retrieve_relevant(
+                thought.task,
+                k=5
+            )
+            thought.receive_insights(relevant_insights)
+    
+    def _handle_completion(self, thought_id):
+        """Handle thought stream completion"""
+        thought = self.thoughts[thought_id]
+        
+        # Extract final solution and insights
+        solution = thought.get_solution()
+        insights = thought.extract_insights()
+        
+        # Store insights for future thoughts
+        for insight in insights:
+            self.shared_insight_memory.store(insight)
+        
+        # Remove from active tracking
+        if self.focused_thought == thought_id:
+            self.focused_thought = None
+        if thought_id in self.background_thoughts:
+            self.background_thoughts.remove(thought_id)
+        
+        # Mark as completed (keep in memory for a while)
+        thought.set_mode("completed")
+        
+        return solution
+    
+    def _suspend_lowest_priority_thought(self):
+        """Suspend lowest priority thought to make room"""
+        # Find lowest priority non-focused thought
+        lowest_priority = None
+        lowest_score = float('inf')
+        
+        for thought_id, thought in self.thoughts.items():
+            if thought_id != self.focused_thought:
+                priority_score = thought.get_priority_score()
+                if priority_score < lowest_score:
+                    lowest_score = priority_score
+                    lowest_priority = thought_id
+        
+        if lowest_priority:
+            thought = self.thoughts[lowest_priority]
+            thought.set_mode("suspended")
+            
+            if lowest_priority in self.background_thoughts:
+                self.background_thoughts.remove(lowest_priority)
+    
+    def get_status(self):
+        """Get current status of all thoughts"""
+        return {
+            'focused': self.focused_thought,
+            'background': self.background_thoughts,
+            'total_thoughts': len(self.thoughts),
+            'context_switches': self.context_switches,
+            'thoughts': {
+                tid: {
+                    'mode': t.mode,
+                    'progress': t.get_progress(),
+                    'priority': t.priority
+                }
+                for tid, t in self.thoughts.items()
+            }
+        }
+
+
+class ThoughtStream:
+    """
+    Individual thought stream (reasoning thread).
+    
+    Maintains:
+    - Task context
+    - Reasoning state
+    - Partial solutions
+    - Insights discovered
+    - Computational budget used
+    """
+    
+    def __init__(self, thought_id, task, initial_state, priority, shared_memory):
+        self.thought_id = thought_id
+        self.task = task
+        self.state = initial_state
+        self.priority = priority
+        self.shared_memory = shared_memory
+        
+        # Reasoning state
+        self.reasoning_trace = []
+        self.partial_solutions = []
+        self.insights = []
+        
+        # Mode: "focused", "background", "suspended", "completed"
+        self.mode = "suspended"
+        
+        # Progress tracking
+        self.steps_taken = 0
+        self.compute_used = 0.0
+        self.start_time = time.time()
+        
+        # Stage processor (for multi-stage reasoning)
+        self.stage_processor = StageProcessor(depth=0)
+        self.current_stage = 0
+        
+    def step(self, compute_budget):
+        """
+        Execute one reasoning step.
+        
+        Args:
+            compute_budget: 0.0-1.0, fraction of full compute available
+        """
+        if self.mode == "suspended":
+            return None
+        
+        # Adjust reasoning depth based on compute budget
+        if compute_budget >= 0.8:
+            # Full reasoning
+            num_stages = 3
+        elif compute_budget >= 0.3:
+            # Medium reasoning
+            num_stages = 2
+        else:
+            # Minimal reasoning (keep alive)
+            num_stages = 1
+        
+        # Perform reasoning step
+        for _ in range(num_stages):
+            # Check shared memory for relevant insights
+            relevant_insights = self.shared_memory.retrieve_relevant(
+                self.task,
+                k=3
+            )
+            
+            # Incorporate insights into reasoning
+            state_with_insights = self._incorporate_insights(
+                self.state,
+                relevant_insights
+            )
+            
+            # Process current stage
+            stage_output = self.stage_processor(
+                state_with_insights,
+                context=self.reasoning_trace
+            )
+            
+            # Update state
+            self.state = stage_output.next_state
+            
+            # Record reasoning step
+            self.reasoning_trace.append({
+                'step': self.steps_taken,
+                'stage': self.current_stage,
+                'output': stage_output.prediction,
+                'confidence': stage_output.confidence
+            })
+            
+            # Extract insights
+            if stage_output.insight:
+                self.insights.append(stage_output.insight)
+            
+            # Check if solution found
+            if stage_output.solution_found:
+                self.partial_solutions.append(stage_output.solution)
+            
+            self.current_stage += 1
+        
+        self.steps_taken += 1
+        self.compute_used += compute_budget
+        
+        return {
+            'state': self.state,
+            'confidence': stage_output.confidence,
+            'insights': len(self.insights)
+        }
+    
+    def set_mode(self, mode):
+        """Set thought mode: focused, background, suspended, completed"""
+        self.mode = mode
+    
+    def is_completed(self):
+        """Check if thought has reached solution"""
+        if not self.partial_solutions:
+            return False
+        
+        # Check if latest solution has high confidence
+        latest_trace = self.reasoning_trace[-1] if self.reasoning_trace else None
+        if latest_trace and latest_trace['confidence'] > 0.9:
+            return True
+        
+        # Or if we've exhausted reasonable compute
+        if self.steps_taken > 1000:
+            return True
+        
+        return False
+    
+    def extract_insights(self):
+        """Extract insights discovered during reasoning"""
+        return self.insights
+    
+    def get_solution(self):
+        """Get final solution"""
+        if self.partial_solutions:
+            return self.partial_solutions[-1]
+        return None
+    
+    def receive_insights(self, insights):
+        """Receive insights from other thought streams"""
+        # Incorporate external insights
+        for insight in insights:
+            if self._is_relevant_insight(insight):
+                self.insights.append({
+                    'insight': insight,
+                    'source': 'cross_pollination'
+                })
+    
+    def _incorporate_insights(self, state, insights):
+        """Incorporate insights into current reasoning state"""
+        if not insights:
+            return state
+        
+        # Augment state with insight information
+        state_augmented = state.copy()
+        state_augmented['external_insights'] = insights
+        return state_augmented
+    
+    def _is_relevant_insight(self, insight):
+        """Check if insight relevant to current task"""
+        # Simplified: check keyword overlap
+        task_keywords = set(self.task.lower().split())
+        insight_keywords = set(str(insight).lower().split())
+        overlap = task_keywords.intersection(insight_keywords)
+        return len(overlap) > 0
+    
+    def get_progress(self):
+        """Get progress estimate (0.0-1.0)"""
+        if not self.reasoning_trace:
+            return 0.0
+        
+        # Average confidence over recent steps
+        recent = self.reasoning_trace[-10:]
+        avg_confidence = np.mean([r['confidence'] for r in recent])
+        return avg_confidence
+    
+    def get_priority_score(self):
+        """Calculate priority score for attention allocation"""
+        priority_values = {'high': 3.0, 'medium': 2.0, 'low': 1.0}
+        base_priority = priority_values.get(self.priority, 1.0)
+        
+        # Boost priority if making progress
+        progress = self.get_progress()
+        
+        # Boost priority if urgent (time-sensitive)
+        time_elapsed = time.time() - self.start_time
+        urgency_factor = min(time_elapsed / 60.0, 2.0)  # Cap at 2x
+        
+        return base_priority * (1.0 + progress) * urgency_factor
+
+
+class AttentionController:
+    """
+    Decides which thought should receive focused attention.
+    
+    Factors:
+    - Priority (user-defined or task-based)
+    - Progress (making headway vs stuck)
+    - Urgency (time-sensitive tasks)
+    - Deadlock (background thought needs focus to proceed)
+    """
+    
+    def should_switch_attention(self, thoughts, current_focus):
+        """
+        Decide if attention should switch to different thought.
+        
+        Returns:
+            (should_switch: bool, new_focus_id: str)
+        """
+        if current_focus is None:
+            # No current focus, pick highest priority
+            return True, self._select_highest_priority(thoughts)
+        
+        current_thought = thoughts.get(current_focus)
+        if not current_thought:
+            return True, self._select_highest_priority(thoughts)
+        
+        # Check if current thought is stuck
+        if self._is_stuck(current_thought):
+            # Switch to different thought, let current "cook" in background
+            return True, self._select_alternate(thoughts, exclude=current_focus)
+        
+        # Check if any thought has much higher priority
+        highest_priority_id = self._select_highest_priority(thoughts)
+        if highest_priority_id != current_focus:
+            highest_thought = thoughts[highest_priority_id]
+            current_priority = current_thought.get_priority_score()
+            highest_priority = highest_thought.get_priority_score()
+            
+            # Switch if priority difference significant
+            if highest_priority > current_priority * 1.5:
+                return True, highest_priority_id
+        
+        # Stay focused on current thought
+        return False, current_focus
+    
+    def _is_stuck(self, thought):
+        """Check if thought is making progress"""
+        if len(thought.reasoning_trace) < 10:
+            return False  # Too early to tell
+        
+        # Check if confidence plateaued
+        recent = thought.reasoning_trace[-10:]
+        confidences = [r['confidence'] for r in recent]
+        confidence_variance = np.var(confidences)
+        
+        # Low variance = stuck
+        return confidence_variance < 0.01
+    
+    def _select_highest_priority(self, thoughts):
+        """Select thought with highest priority score"""
+        best_id = None
+        best_score = -1
+        
+        for thought_id, thought in thoughts.items():
+            if thought.mode != "suspended":
+                score = thought.get_priority_score()
+                if score > best_score:
+                    best_score = score
+                    best_id = thought_id
+        
+        return best_id
+    
+    def _select_alternate(self, thoughts, exclude):
+        """Select alternate thought (not current focus)"""
+        best_id = None
+        best_score = -1
+        
+        for thought_id, thought in thoughts.items():
+            if thought_id != exclude and thought.mode != "suspended":
+                score = thought.get_priority_score()
+                if score > best_score:
+                    best_score = score
+                    best_id = thought_id
+        
+        return best_id if best_id else exclude
+
+
+class SharedInsightMemory:
+    """
+    Shared memory for insights across thought streams.
+    Enables cross-pollination of ideas.
+    """
+    
+    def __init__(self, capacity=1000):
+        self.insights = []
+        self.capacity = capacity
+        self.insight_embeddings = []
+        
+    def store(self, insight):
+        """Store insight with embedding"""
+        if len(self.insights) >= self.capacity:
+            # Remove oldest
+            self.insights.pop(0)
+            self.insight_embeddings.pop(0)
+        
+        # Generate embedding (simplified)
+        embedding = self._embed_insight(insight)
+        
+        self.insights.append(insight)
+        self.insight_embeddings.append(embedding)
+    
+    def retrieve_relevant(self, query, k=5):
+        """Retrieve k most relevant insights for query"""
+        if not self.insights:
+            return []
+        
+        query_embedding = self._embed_insight(query)
+        
+        # Compute similarities
+        similarities = []
+        for i, emb in enumerate(self.insight_embeddings):
+            sim = self._cosine_similarity(query_embedding, emb)
+            similarities.append((sim, i))
+        
+        # Sort and get top k
+        similarities.sort(reverse=True)
+        top_k_indices = [idx for _, idx in similarities[:k]]
+        
+        return [self.insights[i] for i in top_k_indices]
+    
+    def _embed_insight(self, insight):
+        """Generate embedding for insight (simplified)"""
+        # In practice, use model's embedding layer
+        return torch.randn(512)  # Placeholder
+    
+    def _cosine_similarity(self, a, b):
+        """Compute cosine similarity"""
+        return torch.cosine_similarity(a.unsqueeze(0), b.unsqueeze(0)).item()
+```
+
+**Usage Example:**
+
+```python
+# Initialize concurrent thought system
+thought_system = ConcurrentThoughtSystem(
+    max_concurrent_thoughts=7,  # Working memory limit
+    background_slots=3
+)
+
+# Spawn multiple thought streams
+math_thought = thought_system.create_thought(
+    task="Solve differential equation",
+    initial_state=problem_state,
+    priority="high"
+)
+
+text_thought = thought_system.create_thought(
+    task="Summarize article",
+    initial_state=text_state,
+    priority="medium"
+)
+
+code_thought = thought_system.create_thought(
+    task="Debug code",
+    initial_state=code_state,
+    priority="low"
+)
+
+# Run concurrent processing
+for timestep in range(1000):
+    results = thought_system.step(timestep)
+    
+    # Thoughts work in parallel:
+    # - Focused thought gets 100% compute
+    # - Background thoughts get 10% compute (keep alive)
+    # - System automatically switches attention when stuck or priorities change
+    # - Insights from one thought help others
+
+# Get status
+status = thought_system.get_status()
+print(f"Focused: {status['focused']}")
+print(f"Background: {status['background']}")
+print(f"Context switches: {status['context_switches']}")
+```
+
+**Benefits:**
+
+1. **Parallel Problem Solving**: Work on multiple problems simultaneously
+2. **Background Processing**: Difficult problems "cook" in background while working on easier ones
+3. **Context Switching**: Rapid switching between thoughts (like human attention)
+4. **Cross-Pollination**: Insights from one problem help solve another (creativity!)
+5. **Efficiency**: Don't waste compute waiting for one slow thought
+6. **Resilience**: If stuck on one problem, switch to another
+7. **Time Management**: Urgent tasks can preempt less important ones
+
+**Developmental Progression:**
+
+- **Phase 1-2**: Single thought (no concurrency yet)
+- **Phase 3**: 2-3 concurrent thoughts (basic multitasking)
+- **Phase 4**: 5-7 concurrent thoughts (full working memory)
+- **Phase 5**: Advanced attention switching and cross-pollination
+
+#### Internal Timing and Clock System
+
+E-Brain maintains multiple hierarchical timing mechanisms, mimicking the brain's ability to track time at different scales, predict temporal patterns, and time actions accurately.
+
+```python
+class InternalTimingSystem:
+    """
+    Multi-scale timing system inspired by brain's temporal processing.
+    
+    Biological inspiration:
+    - Circadian rhythms (24-hour cycle) → developmental cycles
+    - Interval timing (seconds to minutes) → task duration, action timing
+    - Millisecond timing (motor control, perception) → precise synchronization
+    - Predictive timing (anticipate events) → temporal prediction
+    - Sleep cycles (consolidation) → rest periods for memory optimization
+    
+    Key capabilities:
+    - Track elapsed time at multiple scales
+    - Predict 'when' events will occur
+    - Time actions accurately based on context
+    - Schedule sleep/consolidation cycles
+    - Learn temporal patterns and rhythms
+    """
+    
+    def __init__(
+        self,
+        base_tick_ms=10,  # Base clock tick (10ms = 100Hz)
+        enable_circadian=True,
+        enable_sleep_cycles=True
+    ):
+        # Multi-scale clocks
+        self.base_tick_ms = base_tick_ms
+        self.millisecond_timer = MillisecondTimer(tick_ms=base_tick_ms)
+        self.interval_timer = IntervalTimer()  # Seconds to minutes
+        self.circadian_clock = CircadianClock() if enable_circadian else None
+        self.developmental_timer = DevelopmentalTimer()  # Tracks phases
+        
+        # Temporal prediction
+        self.temporal_predictor = TemporalPredictor()
+        
+        # Action timing
+        self.action_scheduler = ActionScheduler()
+        
+        # Sleep/consolidation system
+        self.sleep_system = SleepConsolidationSystem() if enable_sleep_cycles else None
+        
+        # Performance tracking
+        self.timing_accuracy_history = []
+        
+    def tick(self):
+        """
+        Advance all clocks by one base tick.
+        Called every forward pass or at regular intervals.
+        """
+        # Advance base timer
+        self.millisecond_timer.tick()
+        
+        # Update interval timer
+        if self.millisecond_timer.ticks % 100 == 0:  # Every second
+            self.interval_timer.tick()
+        
+        # Update circadian clock
+        if self.circadian_clock and self.interval_timer.seconds % 3600 == 0:  # Every hour
+            self.circadian_clock.tick()
+        
+        # Check if sleep cycle needed
+        if self.sleep_system and self.should_sleep():
+            self.enter_sleep_cycle()
+    
+    def get_current_time(self, scale='millisecond'):
+        """
+        Get current time at specified scale.
+        
+        Args:
+            scale: 'millisecond', 'second', 'minute', 'hour', 'day', 'phase'
+        """
+        if scale == 'millisecond':
+            return self.millisecond_timer.elapsed_ms
+        elif scale == 'second':
+            return self.interval_timer.seconds
+        elif scale == 'minute':
+            return self.interval_timer.minutes
+        elif scale == 'hour':
+            return self.circadian_clock.hours if self.circadian_clock else 0
+        elif scale == 'day':
+            return self.circadian_clock.days if self.circadian_clock else 0
+        elif scale == 'phase':
+            return self.developmental_timer.current_phase
+    
+    def predict_event_time(self, event_type, context):
+        """
+        Predict when an event will occur based on learned patterns.
+        
+        Examples:
+        - "User typically responds after 2 seconds"
+        - "Training epoch completes in 5 minutes"
+        - "Reward signal arrives 500ms after action"
+        """
+        return self.temporal_predictor.predict(event_type, context)
+    
+    def schedule_action(self, action, target_time_ms, context):
+        """
+        Schedule action to execute at precise time.
+        
+        Args:
+            action: Action to execute
+            target_time_ms: Target execution time in milliseconds
+            context: Situational context for timing adjustment
+        """
+        current_time = self.millisecond_timer.elapsed_ms
+        delay = target_time_ms - current_time
+        
+        # Learn optimal timing from context
+        adjusted_delay = self.action_scheduler.adjust_timing(
+            action, delay, context
+        )
+        
+        self.action_scheduler.schedule(action, adjusted_delay)
+    
+    def learn_temporal_pattern(self, event_sequence):
+        """
+        Learn temporal patterns from event sequences.
+        
+        Examples:
+        - User interaction patterns (morning: questions, evening: coding)
+        - Task rhythms (fast at start, slower when tired)
+        - Environmental cycles (dataset availability, compute resources)
+        """
+        self.temporal_predictor.learn_pattern(event_sequence)
+    
+    def should_sleep(self):
+        """
+        Determine if E-Brain should enter sleep/consolidation cycle.
+        
+        Triggers:
+        - Fixed schedule (e.g., every 4 hours of active time)
+        - After intensive learning (high cognitive load)
+        - Low priority periods (no urgent tasks)
+        - Memory buffer saturation (needs consolidation)
+        """
+        if not self.sleep_system:
+            return False
+        
+        active_time = self.interval_timer.get_active_time()
+        cognitive_load = self.estimate_cognitive_load()
+        memory_pressure = self.get_memory_buffer_usage()
+        
+        return (
+            active_time > self.sleep_system.sleep_interval or
+            cognitive_load > 0.8 or
+            memory_pressure > 0.9
+        )
+    
+    def enter_sleep_cycle(self):
+        """
+        Enter sleep/consolidation mode.
+        
+        During sleep:
+        - Memory consolidation (episodic → semantic)
+        - Experience replay for reinforcement learning
+        - Concept refinement and pruning
+        - Connection reweighting
+        - Homeostatic scaling
+        """
+        print(f"[SLEEP] Entering consolidation cycle at t={self.get_current_time('second')}s")
+        
+        # Pause active processing
+        self.pause_active_thoughts()
+        
+        # Run consolidation
+        self.sleep_system.consolidate(
+            episodic_memory=self.episodic_buffer,
+            semantic_memory=self.semantic_memory,
+            concept_graph=self.concept_graph
+        )
+        
+        # Optimize neural weights
+        self.sleep_system.optimize_connections(self.network)
+        
+        # Resume
+        self.resume_active_thoughts()
+        
+        print(f"[SLEEP] Consolidation complete. Duration: {self.sleep_system.last_duration}s")
+    
+    def estimate_cognitive_load(self):
+        """Estimate current cognitive/computational load (0.0-1.0)"""
+        # Based on: active thoughts, processing speed, error rates
+        return 0.5  # Placeholder
+    
+    def get_memory_buffer_usage(self):
+        """Get episodic memory buffer usage (0.0-1.0)"""
+        return 0.3  # Placeholder
+
+
+class MillisecondTimer:
+    """High-precision timer for millisecond-scale timing"""
+    
+    def __init__(self, tick_ms=10):
+        self.tick_ms = tick_ms
+        self.ticks = 0
+        self.elapsed_ms = 0
+        self.real_start_time = time.time()
+    
+    def tick(self):
+        """Advance timer by one tick"""
+        self.ticks += 1
+        self.elapsed_ms += self.tick_ms
+    
+    def reset(self):
+        """Reset timer"""
+        self.ticks = 0
+        self.elapsed_ms = 0
+        self.real_start_time = time.time()
+    
+    def sync_with_real_time(self):
+        """Synchronize with wall clock time"""
+        real_elapsed = (time.time() - self.real_start_time) * 1000
+        drift = real_elapsed - self.elapsed_ms
+        return drift
+
+
+class IntervalTimer:
+    """Seconds-to-minutes scale timing"""
+    
+    def __init__(self):
+        self.seconds = 0
+        self.minutes = 0
+        self.hours = 0
+        self.active_time = 0  # Exclude sleep time
+        self.is_active = True
+    
+    def tick(self):
+        """Advance by one second"""
+        self.seconds += 1
+        if self.is_active:
+            self.active_time += 1
+        
+        if self.seconds >= 60:
+            self.seconds = 0
+            self.minutes += 1
+        
+        if self.minutes >= 60:
+            self.minutes = 0
+            self.hours += 1
+    
+    def get_active_time(self):
+        """Get active time in seconds (excluding sleep)"""
+        return self.active_time
+    
+    def pause(self):
+        """Pause active time tracking (during sleep)"""
+        self.is_active = False
+    
+    def resume(self):
+        """Resume active time tracking"""
+        self.is_active = True
+
+
+class CircadianClock:
+    """24-hour cycle simulation for developmental rhythms"""
+    
+    def __init__(self, cycle_length_hours=24):
+        self.cycle_length = cycle_length_hours
+        self.hours = 0
+        self.days = 0
+        self.phase = 0.0  # 0.0-1.0 within cycle
+    
+    def tick(self):
+        """Advance by one hour"""
+        self.hours += 1
+        
+        if self.hours >= self.cycle_length:
+            self.hours = 0
+            self.days += 1
+        
+        self.phase = self.hours / self.cycle_length
+    
+    def get_phase(self):
+        """Get current phase in cycle (0.0-1.0)"""
+        return self.phase
+    
+    def is_active_period(self):
+        """Check if in active period (vs rest period)"""
+        # Active: 6am-10pm (0.25-0.917 of cycle)
+        return 0.25 <= self.phase <= 0.917
+
+
+class DevelopmentalTimer:
+    """Tracks developmental phases and transitions"""
+    
+    def __init__(self):
+        self.current_phase = 1
+        self.phase_start_time = 0
+        self.phase_durations = {
+            1: 3 * 30 * 24 * 3600,   # 3 months in seconds
+            2: 3 * 30 * 24 * 3600,   # 3 months
+            3: 6 * 30 * 24 * 3600,   # 6 months
+            4: 6 * 30 * 24 * 3600,   # 6 months
+            5: float('inf')           # Ongoing
+        }
+    
+    def check_phase_transition(self, elapsed_seconds):
+        """Check if should transition to next phase"""
+        time_in_phase = elapsed_seconds - self.phase_start_time
+        
+        if time_in_phase >= self.phase_durations[self.current_phase]:
+            self.transition_to_next_phase(elapsed_seconds)
+    
+    def transition_to_next_phase(self, elapsed_seconds):
+        """Transition to next developmental phase"""
+        if self.current_phase < 5:
+            self.current_phase += 1
+            self.phase_start_time = elapsed_seconds
+            print(f"[DEVELOPMENT] Transitioned to Phase {self.current_phase}")
+
+
+class TemporalPredictor:
+    """
+    Learns and predicts temporal patterns.
+    
+    Examples:
+    - "User responds after ~2 seconds"
+    - "Reward arrives 500ms after action"
+    - "Task typically takes 5 minutes"
+    - "Data available every 10 seconds"
+    """
+    
+    def __init__(self):
+        self.event_patterns = {}  # event_type -> temporal distribution
+        self.sequence_patterns = []  # Learned event sequences with timing
+        
+        # Temporal encoding (like positional encoding)
+        self.temporal_encoder = TemporalEncoder()
+    
+    def predict(self, event_type, context):
+        """
+        Predict when event will occur.
+        
+        Returns:
+            expected_delay_ms: Expected time until event
+            confidence: Prediction confidence
+        """
+        if event_type not in self.event_patterns:
+            return None, 0.0
+        
+        pattern = self.event_patterns[event_type]
+        
+        # Context-dependent adjustment
+        base_delay = pattern['mean_delay_ms']
+        adjusted_delay = self.adjust_for_context(base_delay, context, pattern)
+        
+        confidence = pattern['confidence']
+        
+        return adjusted_delay, confidence
+    
+    def learn_pattern(self, event_sequence):
+        """
+        Learn temporal pattern from event sequence.
+        
+        Args:
+            event_sequence: [(event_type, timestamp), ...]
+        """
+        # Extract inter-event intervals
+        for i in range(len(event_sequence) - 1):
+            current_event, current_time = event_sequence[i]
+            next_event, next_time = event_sequence[i + 1]
+            
+            interval = next_time - current_time
+            
+            # Update statistics for this event transition
+            key = (current_event, next_event)
+            if key not in self.event_patterns:
+                self.event_patterns[key] = {
+                    'mean_delay_ms': interval,
+                    'variance': 0.0,
+                    'count': 1,
+                    'confidence': 0.3
+                }
+            else:
+                pattern = self.event_patterns[key]
+                # Update running statistics
+                old_mean = pattern['mean_delay_ms']
+                pattern['count'] += 1
+                pattern['mean_delay_ms'] = (old_mean * (pattern['count'] - 1) + interval) / pattern['count']
+                pattern['variance'] = 0.9 * pattern['variance'] + 0.1 * (interval - old_mean) ** 2
+                pattern['confidence'] = min(0.95, 0.3 + 0.65 * (pattern['count'] / 100))
+    
+    def adjust_for_context(self, base_delay, context, pattern):
+        """Adjust predicted delay based on context"""
+        # Context factors: time of day, cognitive load, task difficulty
+        adjustment = 1.0
+        
+        if 'time_of_day' in context:
+            # Slower in evening (fatigue)
+            if context['time_of_day'] > 0.7:
+                adjustment *= 1.2
+        
+        if 'cognitive_load' in context:
+            # Slower under high load
+            adjustment *= (1.0 + 0.5 * context['cognitive_load'])
+        
+        return base_delay * adjustment
+
+
+class ActionScheduler:
+    """
+    Schedules and times actions precisely.
+    
+    Learns optimal timing from experience.
+    """
+    
+    def __init__(self):
+        self.scheduled_actions = []  # (action, execute_time_ms)
+        self.timing_history = []  # (action, target_time, actual_time, success)
+    
+    def schedule(self, action, delay_ms):
+        """Schedule action for future execution"""
+        execute_time = time.time() * 1000 + delay_ms
+        self.scheduled_actions.append((action, execute_time))
+        self.scheduled_actions.sort(key=lambda x: x[1])  # Sort by time
+    
+    def check_ready_actions(self, current_time_ms):
+        """Get actions ready for execution"""
+        ready = []
+        remaining = []
+        
+        for action, execute_time in self.scheduled_actions:
+            if current_time_ms >= execute_time:
+                ready.append(action)
+            else:
+                remaining.append((action, execute_time))
+        
+        self.scheduled_actions = remaining
+        return ready
+    
+    def adjust_timing(self, action, delay_ms, context):
+        """
+        Adjust action timing based on learned patterns.
+        
+        Example: Learn to respond slightly faster/slower based on context
+        """
+        # Look up historical timing for similar actions
+        similar_history = [
+            h for h in self.timing_history
+            if h[0] == action and h[3]  # Same action, successful
+        ]
+        
+        if len(similar_history) > 5:
+            # Calculate average adjustment
+            adjustments = [h[2] - h[1] for h in similar_history[-10:]]
+            avg_adjustment = np.mean(adjustments)
+            
+            # Apply learned adjustment
+            return delay_ms + avg_adjustment
+        
+        return delay_ms
+    
+    def record_timing(self, action, target_time, actual_time, success):
+        """Record action timing for learning"""
+        self.timing_history.append((action, target_time, actual_time, success))
+        
+        # Keep limited history
+        if len(self.timing_history) > 1000:
+            self.timing_history = self.timing_history[-1000:]
+
+
+class SleepConsolidationSystem:
+    """
+    Simulates sleep cycles for memory consolidation and optimization.
+    
+    Biological inspiration:
+    - Sleep consolidates memories (hippocampus → cortex)
+    - REM sleep: creative connections, random replay
+    - Deep sleep: synaptic scaling, pruning
+    - Circadian rhythm: regular sleep schedule
+    """
+    
+    def __init__(self, sleep_interval_seconds=4*3600):
+        self.sleep_interval = sleep_interval_seconds  # 4 hours default
+        self.last_sleep_time = 0
+        self.last_duration = 0
+        self.total_sleep_time = 0
+    
+    def consolidate(self, episodic_memory, semantic_memory, concept_graph):
+        """
+        Consolidate memories during sleep.
+        
+        Process:
+        1. Replay episodic memories (experience replay)
+        2. Extract patterns and transfer to semantic memory
+        3. Strengthen important connections
+        4. Prune weak/redundant connections
+        5. Refine concepts in concept graph
+        """
+        start_time = time.time()
+        
+        # 1. Experience Replay (like REM sleep)
+        print("[SLEEP] Experience replay...")
+        important_episodes = self.select_important_episodes(episodic_memory)
+        for episode in important_episodes:
+            # Replay with slight noise (creative recombination)
+            self.replay_episode(episode, noise=0.1)
+        
+        # 2. Memory Transfer (episodic → semantic)
+        print("[SLEEP] Memory consolidation...")
+        patterns = self.extract_patterns(important_episodes)
+        for pattern in patterns:
+            semantic_memory.store(pattern)
+        
+        # 3. Concept Refinement
+        print("[SLEEP] Concept refinement...")
+        self.refine_concepts(concept_graph)
+        
+        # 4. Synaptic Scaling (homeostatic plasticity)
+        print("[SLEEP] Synaptic scaling...")
+        self.homeostatic_scaling()
+        
+        self.last_duration = time.time() - start_time
+        self.total_sleep_time += self.last_duration
+    
+    def optimize_connections(self, network):
+        """
+        Optimize neural connections during sleep.
+        
+        - Strengthen frequently used connections
+        - Weaken rarely used connections
+        - Prune near-zero weights
+        - Renormalize to prevent drift
+        """
+        print("[SLEEP] Optimizing connections...")
+        
+        with torch.no_grad():
+            for module in network.modules():
+                if hasattr(module, 'weight'):
+                    # Prune small weights
+                    mask = torch.abs(module.weight) > 0.01
+                    module.weight *= mask.float()
+                    
+                    # Renormalize
+                    module.weight /= (torch.norm(module.weight) + 1e-8)
+    
+    def select_important_episodes(self, episodic_memory):
+        """Select important episodes for replay"""
+        # Prioritize: high reward, surprising, recent
+        return episodic_memory.get_prioritized_samples(k=100)
+    
+    def replay_episode(self, episode, noise=0.0):
+        """Replay episode (possibly with noise for creativity)"""
+        # Simplified: in practice, run episode through network
+        pass
+    
+    def extract_patterns(self, episodes):
+        """Extract common patterns from episodes"""
+        patterns = []
+        # Simplified: cluster similar episodes, extract prototypes
+        return patterns
+    
+    def refine_concepts(self, concept_graph):
+        """Refine and prune concepts"""
+        # Remove low-confidence concepts
+        # Merge similar concepts
+        # Strengthen correlations
+        pass
+    
+    def homeostatic_scaling(self):
+        """Synaptic scaling to maintain stable activity"""
+        # Ensure average activity remains in target range
+        pass
+
+
+class TemporalEncoder:
+    """Encode temporal information (like positional encoding)"""
+    
+    def __init__(self, d_model=512):
+        self.d_model = d_model
+    
+    def encode(self, time_ms):
+        """
+        Encode time as vector (sinusoidal encoding).
+        
+        Different frequencies capture different timescales.
+        """
+        position = time_ms
+        encoding = torch.zeros(self.d_model)
+        
+        for i in range(0, self.d_model, 2):
+            div_term = np.exp(i * -(np.log(10000.0) / self.d_model))
+            encoding[i] = np.sin(position * div_term)
+            if i + 1 < self.d_model:
+                encoding[i + 1] = np.cos(position * div_term)
+        
+        return encoding
+```
+
+**Usage Example:**
+
+```python
+# Initialize timing system
+timing_system = InternalTimingSystem(
+    base_tick_ms=10,  # 100Hz base clock
+    enable_circadian=True,
+    enable_sleep_cycles=True
+)
+
+# During training loop
+for step in range(training_steps):
+    # Advance clock
+    timing_system.tick()
+    
+    # Predict when reward will arrive
+    expected_delay, confidence = timing_system.predict_event_time(
+        event_type="reward_signal",
+        context={"action": current_action}
+    )
+    
+    # Schedule action at precise time
+    timing_system.schedule_action(
+        action=next_action,
+        target_time_ms=timing_system.get_current_time() + 500,  # 500ms from now
+        context={"task_difficulty": 0.7}
+    )
+    
+    # Learn temporal patterns
+    timing_system.learn_temporal_pattern(recent_event_sequence)
+    
+    # Check if sleep needed
+    if timing_system.should_sleep():
+        timing_system.enter_sleep_cycle()
+        # Memory consolidation happens automatically
+
+# Check current developmental phase
+current_phase = timing_system.get_current_time(scale='phase')
+print(f"Currently in Phase {current_phase}")
+```
+
+**Integration with Bio-Inspired Neurons:**
+
+The timing system naturally integrates with bio-inspired neurons:
+
+```python
+# Neurons already have temporal dynamics
+neuron = BioInspiredNeuron(
+    input_dim=512,
+    leak_rate=0.9,  # Leaky integration over time
+    enable_stdp=True  # Spike-timing-dependent plasticity
+)
+
+# STDP learning window uses timing system
+# Neurons that fire within 20ms strengthen connection
+stdp_window_ms = 20
+timing_system.temporal_encoder.encode(stdp_window_ms)
+
+# Action timing precision improves with practice
+for trial in range(100):
+    target_time = 1000  # 1 second
+    actual_time = execute_timed_action(neuron_output)
+    error = target_time - actual_time
+    
+    # Learn timing adjustment
+    timing_system.action_scheduler.record_timing(
+        action="motor_command",
+        target_time=target_time,
+        actual_time=actual_time,
+        success=(abs(error) < 50)  # Within 50ms = success
+    )
+```
+
+**Benefits:**
+
+1. **Multi-Scale Timing**: Milliseconds to months, all coordinated
+2. **Temporal Prediction**: Learn "when" not just "what" and "how"
+3. **Precise Action Timing**: Context-dependent timing adjustments
+4. **Sleep Consolidation**: Automatic memory optimization during rest
+5. **Developmental Tracking**: Phase transitions based on time + milestones
+6. **Circadian Rhythms**: Activity patterns matching developmental stage
+7. **Learned Patterns**: Discover temporal regularities in environment
+
+**Developmental Progression:**
+
+- **Phase 1**: Basic tick tracking, no prediction yet
+- **Phase 2**: Learn simple temporal patterns (reward after action)
+- **Phase 3**: Interval timing, schedule actions accurately
+- **Phase 4**: Complex temporal prediction, first sleep cycles
+- **Phase 5**: Full circadian rhythms, strategic sleep scheduling
+
+#### Sensory-Grounded Thought System
+
+Human thoughts are fundamentally grounded in sensory experiences—we think in images, sounds, feelings, not just abstract symbols. E-Brain's thoughts are similarly rooted in multi-sensory representations.
+
+```python
+class SensoryGroundedThoughtSystem:
+    """
+    Thoughts grounded in sensory modalities, like human cognition.
+    
+    Biological inspiration:
+    - Mental imagery (visual thinking): "Picture a red apple"
+    - Inner speech (auditory thinking): "What should I say?"
+    - Tactile simulation (motor thinking): "How does it feel to grasp?"
+    - Multimodal integration: Combine senses for rich thoughts
+    - Sensory replay: Reactivate sensory cortices during thinking
+    
+    Key capabilities:
+    - Thoughts have sensory components (visual, auditory, tactile, etc.)
+    - Can "imagine" or "simulate" sensory experiences
+    - Abstract concepts grounded in sensory experiences
+    - Reasoning uses sensory simulation
+    - Inner speech for language-based reasoning
+    """
+    
+    def __init__(
+        self,
+        visual_encoder,
+        audio_encoder,
+        tactile_encoder,
+        language_encoder,
+        enable_mental_imagery=True
+    ):
+        # Sensory encoders (for grounding)
+        self.visual_encoder = visual_encoder
+        self.audio_encoder = audio_encoder
+        self.tactile_encoder = tactile_encoder
+        self.language_encoder = language_encoder
+        
+        # Sensory decoders (for simulation/imagination)
+        self.visual_decoder = VisualImageryGenerator()
+        self.audio_decoder = AuditorySimulator()
+        self.tactile_decoder = TactilePredictor()
+        
+        # Multimodal integration
+        self.multimodal_binder = MultimodalBinder()
+        
+        # Thought representation with sensory components
+        self.current_thought = SensoryThought()
+        
+        # Mental imagery system
+        self.mental_imagery_enabled = enable_mental_imagery
+        self.imagery_buffer = []  # Visual mental images
+        
+        # Inner speech system
+        self.inner_speech_buffer = []  # Auditory thoughts (words)
+        
+        # Sensory grounding database
+        self.sensory_grounding_db = SensoryGroundingDatabase()
+        
+    def create_thought(self, task, context, modality_preferences=None):
+        """
+        Create a thought grounded in relevant sensory modalities.
+        
+        Args:
+            task: Task description
+            context: Current context
+            modality_preferences: Which senses to emphasize ['visual', 'auditory', 'tactile']
+        
+        Returns:
+            SensoryThought: Thought with sensory components
+        """
+        # Determine which sensory modalities are relevant
+        if modality_preferences is None:
+            modality_preferences = self._infer_relevant_modalities(task, context)
+        
+        thought = SensoryThought(task=task)
+        
+        # Add visual component if relevant
+        if 'visual' in modality_preferences:
+            visual_component = self._generate_visual_thought(task, context)
+            thought.add_modality('visual', visual_component)
+        
+        # Add auditory component (inner speech)
+        if 'auditory' in modality_preferences or 'language' in modality_preferences:
+            auditory_component = self._generate_inner_speech(task, context)
+            thought.add_modality('auditory', auditory_component)
+        
+        # Add tactile/motor component
+        if 'tactile' in modality_preferences or 'motor' in modality_preferences:
+            tactile_component = self._generate_tactile_prediction(task, context)
+            thought.add_modality('tactile', tactile_component)
+        
+        # Add abstract/symbolic component
+        symbolic_component = self._generate_symbolic_representation(task, context)
+        thought.add_modality('symbolic', symbolic_component)
+        
+        # Bind modalities together
+        thought.integrated_representation = self.multimodal_binder.bind(
+            thought.modality_components
+        )
+        
+        return thought
+    
+    def think_visually(self, concept):
+        """
+        Generate visual mental imagery for a concept.
+        
+        Example: "Think of a red apple"
+        - Retrieves visual features from grounding database
+        - Generates mental image using visual decoder
+        """
+        # Retrieve visual grounding
+        visual_grounding = self.sensory_grounding_db.get_visual(concept)
+        
+        if visual_grounding is None:
+            # No direct visual experience, try compositional
+            visual_grounding = self._compose_visual_from_parts(concept)
+        
+        # Generate mental image
+        mental_image = self.visual_decoder.generate(visual_grounding)
+        self.imagery_buffer.append(mental_image)
+        
+        return mental_image
+    
+    def think_in_words(self, thought_content):
+        """
+        Inner speech: think in words/language.
+        
+        Example: "What should I say to the user?"
+        - Converts thought to language
+        - Simulates auditory representation (inner voice)
+        """
+        # Convert to language tokens
+        language_tokens = self.language_encoder.tokenize(thought_content)
+        
+        # Generate inner speech (auditory simulation)
+        inner_voice = self.audio_decoder.generate_speech(
+            language_tokens,
+            voice='inner'  # Own voice simulation
+        )
+        
+        self.inner_speech_buffer.append(inner_voice)
+        
+        return inner_voice
+    
+    def imagine_action(self, action, context):
+        """
+        Simulate what an action would feel like (motor/tactile prediction).
+        
+        Example: "What happens if I move the block?"
+        - Predicts tactile sensation
+        - Predicts visual outcome
+        - Uses for planning
+        """
+        # Tactile prediction
+        tactile_prediction = self.tactile_decoder.predict(action, context)
+        
+        # Visual prediction (what will I see?)
+        visual_prediction = self.visual_decoder.predict_next_frame(action, context)
+        
+        # Audio prediction (what will I hear?)
+        audio_prediction = self.audio_decoder.predict_sound(action, context)
+        
+        simulated_experience = {
+            'tactile': tactile_prediction,
+            'visual': visual_prediction,
+            'auditory': audio_prediction
+        }
+        
+        return simulated_experience
+    
+    def ground_concept(self, concept, sensory_experiences):
+        """
+        Ground an abstract concept in sensory experiences.
+        
+        Example: "Dog" concept grounded in:
+        - Visual: Four legs, fur, various breeds seen
+        - Auditory: Barking sounds heard
+        - Tactile: Soft fur when petted
+        """
+        grounding = ConceptGrounding(concept=concept)
+        
+        for experience in sensory_experiences:
+            if experience.modality == 'visual':
+                visual_features = self.visual_encoder(experience.data)
+                grounding.add_visual(visual_features)
+            
+            elif experience.modality == 'auditory':
+                audio_features = self.audio_encoder(experience.data)
+                grounding.add_auditory(audio_features)
+            
+            elif experience.modality == 'tactile':
+                tactile_features = self.tactile_encoder(experience.data)
+                grounding.add_tactile(tactile_features)
+        
+        # Store grounding
+        self.sensory_grounding_db.store(concept, grounding)
+        
+        return grounding
+    
+    def reason_with_imagery(self, problem):
+        """
+        Use mental imagery for spatial/visual reasoning.
+        
+        Example: "Can the couch fit through the door?"
+        - Visualize couch dimensions
+        - Visualize door dimensions
+        - Mentally rotate/manipulate
+        - Check if fits
+        """
+        # Generate mental images
+        couch_image = self.think_visually("couch")
+        door_image = self.think_visually("door")
+        
+        # Spatial reasoning using imagery
+        can_fit = self._spatial_reasoning_with_images(
+            couch_image,
+            door_image,
+            operation='fit_through'
+        )
+        
+        return can_fit
+    
+    def multimodal_reasoning(self, task):
+        """
+        Combine multiple sensory modalities for reasoning.
+        
+        Example: "What made that sound?"
+        - Auditory: Sound characteristics
+        - Visual: Look for moving objects
+        - Memory: Similar past experiences
+        - Integration: "A car drove by"
+        """
+        # Collect sensory information
+        auditory_info = self.get_current_audio()
+        visual_info = self.get_current_visual()
+        
+        # Retrieve similar past experiences (multimodal)
+        similar_experiences = self.sensory_grounding_db.retrieve_similar(
+            auditory=auditory_info,
+            visual=visual_info
+        )
+        
+        # Integrate and infer
+        hypothesis = self.multimodal_binder.integrate_and_infer(
+            current={'auditory': auditory_info, 'visual': visual_info},
+            past=similar_experiences
+        )
+        
+        return hypothesis
+    
+    def _infer_relevant_modalities(self, task, context):
+        """Infer which sensory modalities are relevant for task"""
+        modalities = []
+        
+        task_lower = task.lower()
+        
+        # Visual tasks
+        if any(word in task_lower for word in ['see', 'look', 'image', 'visual', 'color', 'shape']):
+            modalities.append('visual')
+        
+        # Auditory/language tasks
+        if any(word in task_lower for word in ['say', 'hear', 'sound', 'speak', 'listen', 'word']):
+            modalities.append('auditory')
+        
+        # Tactile/motor tasks
+        if any(word in task_lower for word in ['touch', 'feel', 'grasp', 'move', 'action', 'motor']):
+            modalities.append('tactile')
+        
+        # Default: use all modalities if unclear
+        if not modalities:
+            modalities = ['visual', 'auditory', 'symbolic']
+        
+        return modalities
+    
+    def _generate_visual_thought(self, task, context):
+        """Generate visual component of thought"""
+        # Use visual decoder to imagine relevant imagery
+        relevant_visual = self.visual_decoder.generate_task_relevant(task, context)
+        return relevant_visual
+    
+    def _generate_inner_speech(self, task, context):
+        """Generate inner speech (language-based thought)"""
+        # Convert task to language representation
+        inner_speech = self.language_encoder.encode(task)
+        # Simulate auditory representation
+        auditory_sim = self.audio_decoder.simulate_inner_voice(inner_speech)
+        return auditory_sim
+    
+    def _generate_tactile_prediction(self, task, context):
+        """Generate tactile/motor prediction"""
+        # Predict what actions might feel like
+        tactile_pred = self.tactile_decoder.predict_from_task(task, context)
+        return tactile_pred
+    
+    def _generate_symbolic_representation(self, task, context):
+        """Generate abstract symbolic representation"""
+        # Traditional symbolic/vector representation
+        return {'task_embedding': self.language_encoder(task)}
+    
+    def _compose_visual_from_parts(self, concept):
+        """Compose visual representation from known parts"""
+        # Example: "red apple" = red color + apple shape
+        parts = self._decompose_concept(concept)
+        visual_parts = [self.sensory_grounding_db.get_visual(p) for p in parts]
+        composed = self.visual_decoder.compose(visual_parts)
+        return composed
+    
+    def _spatial_reasoning_with_images(self, image1, image2, operation):
+        """Spatial reasoning using mental imagery"""
+        # Simplified: use visual reasoning network
+        return self.visual_decoder.spatial_reasoning(image1, image2, operation)
+
+
+class SensoryThought:
+    """
+    A thought with multiple sensory modality components.
+    
+    Like human thoughts: not just abstract symbols, but rich sensory experiences.
+    """
+    
+    def __init__(self, task=None):
+        self.task = task
+        self.modality_components = {}
+        self.integrated_representation = None
+        self.creation_time = time.time()
+    
+    def add_modality(self, modality_name, component):
+        """Add a sensory modality component to thought"""
+        self.modality_components[modality_name] = component
+    
+    def get_modality(self, modality_name):
+        """Retrieve specific sensory component"""
+        return self.modality_components.get(modality_name)
+    
+    def has_modality(self, modality_name):
+        """Check if thought has specific modality"""
+        return modality_name in self.modality_components
+    
+    def get_dominant_modality(self):
+        """Get the dominant sensory modality of this thought"""
+        # Based on component strength/activation
+        if not self.modality_components:
+            return None
+        
+        # Simplified: return modality with highest activation
+        dominant = max(
+            self.modality_components.items(),
+            key=lambda x: torch.norm(x[1]) if torch.is_tensor(x[1]) else 0
+        )
+        return dominant[0]
+    
+    def describe(self):
+        """Describe thought in human-readable form"""
+        desc = f"Thought about: {self.task}\n"
+        desc += f"Modalities: {list(self.modality_components.keys())}\n"
+        desc += f"Dominant: {self.get_dominant_modality()}\n"
+        return desc
+
+
+class SensoryGroundingDatabase:
+    """
+    Database linking abstract concepts to sensory experiences.
+    
+    Example:
+    "Dog" → 
+        Visual: [images of dogs]
+        Auditory: [barking sounds]
+        Tactile: [fur texture]
+    """
+    
+    def __init__(self):
+        self.visual_groundings = {}
+        self.auditory_groundings = {}
+        self.tactile_groundings = {}
+        self.multimodal_index = {}
+    
+    def store(self, concept, grounding):
+        """Store sensory grounding for concept"""
+        if grounding.visual:
+            self.visual_groundings[concept] = grounding.visual
+        if grounding.auditory:
+            self.auditory_groundings[concept] = grounding.auditory
+        if grounding.tactile:
+            self.tactile_groundings[concept] = grounding.tactile
+        
+        self.multimodal_index[concept] = grounding
+    
+    def get_visual(self, concept):
+        """Get visual grounding for concept"""
+        return self.visual_groundings.get(concept)
+    
+    def get_auditory(self, concept):
+        """Get auditory grounding for concept"""
+        return self.auditory_groundings.get(concept)
+    
+    def get_tactile(self, concept):
+        """Get tactile grounding for concept"""
+        return self.tactile_groundings.get(concept)
+    
+    def get_multimodal(self, concept):
+        """Get all sensory groundings for concept"""
+        return self.multimodal_index.get(concept)
+    
+    def retrieve_similar(self, **modality_queries):
+        """
+        Retrieve concepts with similar sensory properties.
+        
+        Example: retrieve_similar(auditory=barking_sound, visual=furry_thing)
+        → Returns "dog", "wolf", etc.
+        """
+        candidates = []
+        
+        for concept, grounding in self.multimodal_index.items():
+            similarity = 0.0
+            num_modalities = 0
+            
+            if 'visual' in modality_queries and grounding.visual:
+                sim = self._compute_similarity(
+                    modality_queries['visual'],
+                    grounding.visual
+                )
+                similarity += sim
+                num_modalities += 1
+            
+            if 'auditory' in modality_queries and grounding.auditory:
+                sim = self._compute_similarity(
+                    modality_queries['auditory'],
+                    grounding.auditory
+                )
+                similarity += sim
+                num_modalities += 1
+            
+            if num_modalities > 0:
+                avg_similarity = similarity / num_modalities
+                candidates.append((concept, avg_similarity))
+        
+        # Sort by similarity
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        return [c[0] for c in candidates[:10]]
+    
+    def _compute_similarity(self, query, stored):
+        """Compute similarity between sensory representations"""
+        if torch.is_tensor(query) and torch.is_tensor(stored):
+            return torch.cosine_similarity(query, stored, dim=-1).item()
+        return 0.0
+
+
+class ConceptGrounding:
+    """Sensory grounding for a single concept"""
+    
+    def __init__(self, concept):
+        self.concept = concept
+        self.visual = []
+        self.auditory = []
+        self.tactile = []
+        self.grounding_strength = 0.0
+    
+    def add_visual(self, visual_features):
+        """Add visual experience"""
+        self.visual.append(visual_features)
+        self._update_strength()
+    
+    def add_auditory(self, audio_features):
+        """Add auditory experience"""
+        self.auditory.append(audio_features)
+        self._update_strength()
+    
+    def add_tactile(self, tactile_features):
+        """Add tactile experience"""
+        self.tactile.append(tactile_features)
+        self._update_strength()
+    
+    def _update_strength(self):
+        """Update grounding strength based on # experiences"""
+        total_experiences = len(self.visual) + len(self.auditory) + len(self.tactile)
+        # More experiences = stronger grounding
+        self.grounding_strength = min(1.0, total_experiences / 10.0)
+    
+    def get_prototypical_visual(self):
+        """Get prototypical visual representation (average)"""
+        if not self.visual:
+            return None
+        if torch.is_tensor(self.visual[0]):
+            return torch.mean(torch.stack(self.visual), dim=0)
+        return self.visual[0]
+    
+    def get_prototypical_auditory(self):
+        """Get prototypical auditory representation"""
+        if not self.auditory:
+            return None
+        if torch.is_tensor(self.auditory[0]):
+            return torch.mean(torch.stack(self.auditory), dim=0)
+        return self.auditory[0]
+
+
+class VisualImageryGenerator:
+    """
+    Generate mental visual imagery (imagination).
+    
+    Like when you close your eyes and picture something.
+    """
+    
+    def __init__(self, latent_dim=512):
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_dim, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, 2048),
+            nn.ReLU(),
+            nn.Linear(2048, 3 * 64 * 64),  # RGB 64x64 image
+            nn.Tanh()
+        )
+    
+    def generate(self, concept_embedding):
+        """Generate mental image from concept"""
+        if not torch.is_tensor(concept_embedding):
+            concept_embedding = torch.randn(512)  # Placeholder
+        
+        mental_image = self.decoder(concept_embedding)
+        mental_image = mental_image.view(-1, 3, 64, 64)
+        return mental_image
+    
+    def generate_task_relevant(self, task, context):
+        """Generate imagery relevant to task"""
+        # Simplified: encode task and generate
+        task_embedding = self._encode_task(task)
+        return self.generate(task_embedding)
+    
+    def compose(self, visual_parts):
+        """Compose visual image from parts"""
+        # Average part embeddings
+        if visual_parts:
+            composed = torch.mean(torch.stack([v for v in visual_parts if v is not None]), dim=0)
+            return self.generate(composed)
+        return None
+    
+    def spatial_reasoning(self, image1, image2, operation):
+        """Perform spatial reasoning on mental images"""
+        # Simplified: use learned reasoning network
+        # In practice: CNN for spatial operations
+        return torch.rand(1).item() > 0.5  # Placeholder
+    
+    def predict_next_frame(self, action, context):
+        """Predict what will be seen after action"""
+        # Video prediction model
+        return self.generate(torch.randn(512))  # Placeholder
+
+
+class AuditorySimulator:
+    """
+    Simulate auditory experiences (inner speech, sound imagination).
+    """
+    
+    def __init__(self):
+        self.tts_model = None  # Text-to-speech for inner voice
+        self.sound_generator = None
+    
+    def generate_speech(self, tokens, voice='inner'):
+        """Generate inner speech (auditory thought)"""
+        # Convert tokens to audio representation
+        # Inner voice: own voice simulation
+        audio_features = self._tokens_to_audio(tokens, voice)
+        return audio_features
+    
+    def simulate_inner_voice(self, language_encoding):
+        """Simulate hearing own thoughts"""
+        # Language → auditory simulation
+        return self._language_to_audio(language_encoding)
+    
+    def predict_sound(self, action, context):
+        """Predict what sound action will make"""
+        # Action → sound prediction
+        return torch.randn(128)  # Audio features placeholder
+    
+    def _tokens_to_audio(self, tokens, voice):
+        """Convert language tokens to audio features"""
+        return torch.randn(128)  # Placeholder
+    
+    def _language_to_audio(self, encoding):
+        """Convert language encoding to audio simulation"""
+        return torch.randn(128)  # Placeholder
+
+
+class TactilePredictor:
+    """
+    Predict tactile/motor sensations (how actions feel).
+    """
+    
+    def __init__(self):
+        self.prediction_network = nn.Sequential(
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128)
+        )
+    
+    def predict(self, action, context):
+        """Predict tactile sensation from action"""
+        # Encode action and context
+        action_embedding = self._encode_action(action, context)
+        tactile_prediction = self.prediction_network(action_embedding)
+        return tactile_prediction
+    
+    def predict_from_task(self, task, context):
+        """Predict relevant tactile info for task"""
+        task_embedding = self._encode_task(task)
+        return self.prediction_network(task_embedding)
+    
+    def _encode_action(self, action, context):
+        """Encode action for prediction"""
+        return torch.randn(512)  # Placeholder
+    
+    def _encode_task(self, task):
+        """Encode task for prediction"""
+        return torch.randn(512)  # Placeholder
+
+
+class MultimodalBinder:
+    """
+    Bind multiple sensory modalities into unified representation.
+    
+    Inspired by brain's multimodal integration areas.
+    """
+    
+    def __init__(self, output_dim=512):
+        self.visual_proj = nn.Linear(2048, output_dim)
+        self.audio_proj = nn.Linear(128, output_dim)
+        self.tactile_proj = nn.Linear(128, output_dim)
+        self.symbolic_proj = nn.Linear(512, output_dim)
+        
+        self.fusion = nn.Sequential(
+            nn.Linear(output_dim * 4, output_dim),
+            nn.ReLU(),
+            nn.Linear(output_dim, output_dim)
+        )
+    
+    def bind(self, modality_components):
+        """Bind multiple modalities into unified representation"""
+        projections = []
+        
+        if 'visual' in modality_components:
+            visual = modality_components['visual']
+            if torch.is_tensor(visual):
+                visual_flat = visual.flatten()
+                visual_proj = self.visual_proj(visual_flat)
+                projections.append(visual_proj)
+        
+        if 'auditory' in modality_components:
+            audio = modality_components['auditory']
+            if torch.is_tensor(audio):
+                audio_proj = self.audio_proj(audio)
+                projections.append(audio_proj)
+        
+        if 'tactile' in modality_components:
+            tactile = modality_components['tactile']
+            if torch.is_tensor(tactile):
+                tactile_proj = self.tactile_proj(tactile)
+                projections.append(tactile_proj)
+        
+        if 'symbolic' in modality_components:
+            symbolic = modality_components['symbolic']['task_embedding']
+            if torch.is_tensor(symbolic):
+                symbolic_proj = self.symbolic_proj(symbolic)
+                projections.append(symbolic_proj)
+        
+        # Pad if necessary
+        while len(projections) < 4:
+            projections.append(torch.zeros_like(projections[0]))
+        
+        # Concatenate and fuse
+        concatenated = torch.cat(projections, dim=-1)
+        unified = self.fusion(concatenated)
+        
+        return unified
+    
+    def integrate_and_infer(self, current, past):
+        """Integrate current sensory info with past experiences"""
+        # Bind current
+        current_bound = self.bind(current)
+        
+        # Retrieve and bind similar past
+        past_bound = [self.bind(p) for p in past[:5]]  # Top 5
+        
+        # Combine for inference
+        if past_bound:
+            combined = torch.mean(torch.stack([current_bound] + past_bound), dim=0)
+        else:
+            combined = current_bound
+        
+        return combined
+```
+
+**Usage Example:**
+
+```python
+# Initialize sensory-grounded thought system
+sensory_system = SensoryGroundedThoughtSystem(
+    visual_encoder=vision_encoder,
+    audio_encoder=audio_encoder,
+    tactile_encoder=tactile_encoder,
+    language_encoder=language_encoder,
+    enable_mental_imagery=True
+)
+
+# Example 1: Think visually about a concept
+mental_image = sensory_system.think_visually("red apple")
+# Generates internal visual representation (imagination)
+
+# Example 2: Inner speech (think in words)
+inner_voice = sensory_system.think_in_words("What should I tell the user?")
+# Simulates hearing own thoughts
+
+# Example 3: Imagine action before executing
+simulated_experience = sensory_system.imagine_action(
+    action="move_block_left",
+    context=current_scene
+)
+# Returns: {tactile: "feels heavy", visual: "block moves left", auditory: "sliding sound"}
+
+# Example 4: Reason with mental imagery
+can_fit = sensory_system.reason_with_imagery("Can the couch fit through the door?")
+# Uses visual mental manipulation
+
+# Example 5: Ground abstract concept in sensory experiences
+sensory_system.ground_concept(
+    concept="dog",
+    sensory_experiences=[
+        SensoryExperience(modality='visual', data=dog_image),
+        SensoryExperience(modality='auditory', data=bark_sound),
+        SensoryExperience(modality='tactile', data=fur_texture)
+    ]
+)
+
+# Example 6: Create multimodal thought
+thought = sensory_system.create_thought(
+    task="Describe what you see and hear",
+    context=environment,
+    modality_preferences=['visual', 'auditory']
+)
+print(thought.describe())
+# Thought about: Describe what you see and hear
+# Modalities: ['visual', 'auditory', 'symbolic']
+# Dominant: visual
+
+# Example 7: Multimodal reasoning
+hypothesis = sensory_system.multimodal_reasoning("What made that sound?")
+# Integrates: audio (sound characteristics) + visual (moving objects) → "A car drove by"
+```
+
+**Integration with Concurrent Thoughts:**
+
+```python
+# Thoughts now have sensory components
+thought_1 = ThoughtStream(
+    task="Solve math problem",
+    sensory_components={
+        'visual': mental_image_of_equation,
+        'symbolic': abstract_representation,
+        'auditory': inner_speech_counting
+    }
+)
+
+# Different thoughts use different modalities
+thought_2 = ThoughtStream(
+    task="Listen to music",
+    sensory_components={
+        'auditory': music_representation,  # Dominant
+        'visual': None,  # Not needed
+        'symbolic': music_structure
+    }
+)
+
+# Cross-pollination includes sensory insights
+when thought_1 discovers_pattern():
+    insight = {
+        'content': "Sequence follows Fibonacci",
+        'visual_pattern': visual_representation_of_sequence,
+        'auditory': inner_speech("It's Fibonacci!")
+    }
+    shared_insight_memory.store(insight)
+```
+
+**Benefits:**
+
+1. **Grounded Cognition**: Thoughts rooted in real sensory experiences
+2. **Mental Imagery**: Can "imagine" or "visualize" during reasoning
+3. **Inner Speech**: Think in words (language-based reasoning)
+4. **Multimodal Integration**: Rich thoughts combining multiple senses
+5. **Sensory Simulation**: Predict what actions will feel/look/sound like
+6. **Concept Grounding**: Abstract concepts linked to concrete experiences
+7. **Human-like Thinking**: Matches how humans actually think (in images, sounds, feelings)
+
+**Developmental Progression:**
+
+- **Phase 1**: Simple sensory associations (visual pattern → label)
+- **Phase 2**: Basic sensory grounding (object → visual features)
+- **Phase 3**: Inner speech emerges, visual mental imagery begins
+- **Phase 4**: Rich multimodal thoughts, sensory simulation for planning
+- **Phase 5**: Expert mental imagery, complex sensory reasoning
 
 #### Long-Term Memory
 - **Purpose:** Store learned knowledge persistently
