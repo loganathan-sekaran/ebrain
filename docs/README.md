@@ -27,10 +27,11 @@ Create a model that mimics human brain development, starting from basic sensory 
 - **[04-implementation-roadmap.md](04-implementation-roadmap.md)** - Detailed implementation plan and milestones
 - **[05-development-strategy.md](05-development-strategy.md)** - ⭐ **Implementation vs training strategy, data requirements, and team structure**
 - **[05-development-strategy-visual.md](05-development-strategy-visual.md)** - 📊 **Visual guide to development workflow and timeline**
-- **[06-technical-stack.md](06-technical-stack.md)** - Technology choices and tools (formerly 05-technical-stack.md)
-- **[07-challenges-and-solutions.md](07-challenges-and-solutions.md)** - Known challenges and mitigation strategies (formerly 06)
-- **[08-model-cloning-and-knowledge-transfer.md](08-model-cloning-and-knowledge-transfer.md)** - Model specialization and inter-model knowledge transfer (formerly 07)
-- **[09-tech-stack-decision-framework.md](09-tech-stack-decision-framework.md)** - Comprehensive rationale for technology choices (formerly 08)
+- **[06-technical-stack.md](06-technical-stack.md)** - Technology choices and tools
+- **[07-challenges-and-solutions.md](07-challenges-and-solutions.md)** - Known challenges and mitigation strategies
+- **[08-model-cloning-and-knowledge-transfer.md](08-model-cloning-and-knowledge-transfer.md)** - Model specialization and inter-model knowledge transfer
+- **[09-tech-stack-decision-framework.md](09-tech-stack-decision-framework.md)** - Comprehensive rationale for technology choices
+- **[10-computational-advantages-and-tool-use.md](10-computational-advantages-and-tool-use.md)** - ⚡ **Superhuman computation + system tool integration**
 
 ## Project Status
 
