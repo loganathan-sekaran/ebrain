@@ -108,29 +108,37 @@ This comprehensive review evaluated the technical feasibility, architectural coh
 | **TRK-01** | Documentation | Realign broken doc links in `docs/README.md` and `README.md` | P0 | ✅ Completed | Platform | Immediate |
 | **TRK-02** | Documentation | Remove duplicate text sections in `README.md` | P0 | ✅ Completed | Platform | Immediate |
 | **TRK-03** | Standards | Unify Python version across `pyproject.toml`, `README.md`, and roadmaps to Python 3.10+ | P0 | ✅ Completed | Platform | Immediate |
-| **TRK-04** | Architecture | Formulate Horizon 1 `GrowableNetwork` specification in native PyTorch | P0 | 📋 In Progress | ML Core | Month 1 |
-| **TRK-05** | Architecture | Decouple biological spiking research from main modular PyTorch engine | P1 | 📋 Planned | ML Core | Month 1 |
+| **TRK-03** | Standards | Unify Python version across `pyproject.toml`, `README.md`, and roadmaps to Python 3.10+ | P0 | ✅ Completed | Platform | Immediate |
+| **TRK-04** | Architecture | Formulate Horizon 1 `GrowableNetwork` specification in native PyTorch | P0 | ✅ Completed (Design) | ML Core | Month 1 |
+| **TRK-05** | Architecture | Decouple biological spiking research from main modular PyTorch engine | P1 | ✅ Completed (Design) | ML Core | Month 1 |
 | **TRK-06** | Framework | Set up testing and quality gate infrastructure (`pytest`, `ruff`, CI workflow) | P1 | 📋 Planned | DevOps/ML | Month 1 |
 | **TRK-07** | Benchmarking | Implement continual learning baseline runner (Split-MNIST / Split-CIFAR) | P1 | 📋 Planned | ML Core | Month 2 |
 | **TRK-08** | Methodology | Specify Concept Node schema and Composition Engine data structure | P1 | 📋 Planned | Architecture | Month 3 |
-| **TRK-09** | Architecture | Align working memory model: define System 1 (parallel) vs System 2 (bounded slots) | P2 | 📋 Planned | Architecture | Month 4 |
+| **TRK-09** | Architecture | Align working memory model: define System 1 (parallel) vs System 2 (bounded slots) | P2 | ✅ Completed (Design) | Architecture | Month 4 |
 | **TRK-10** | Scaffolding | Evaluate small open foundation models (SmolLM / TinyLlama) for language scaffold | P2 | 📋 Planned | ML Research | Month 6 |
 
 ---
 
-## 6. Record of Inconsistencies Fixed
+## 6. Record of Inconsistencies & Design Alignments Fixed
 
-During this review cycle, the following inconsistencies were resolved directly in the project files:
-1. **`README.md`**:
-   - Fixed prerequisite Python version from `3.9+` to `3.10+` to align with `docs/08-tech-stack-decision-framework.md`.
-   - Removed duplicated text blocks in Section 12/13.
-   - Restored missing Section 10 "Developmental Progression" subsection that was displaced.
-   - Corrected duplicate subsection numbering (`### 7. Model Cloning` and `### 7. Knowledge Transfer`).
-   - Added links to `11-philosophy-best-of-both-worlds.md` and this review tracking document.
-2. **`pyproject.toml`**:
-   - Updated `requires-python` from `">=3.9"` to `">=3.10"`.
-3. **`docs/04-implementation-roadmap.md`**:
-   - Updated Python environment requirement from `3.9+` to `3.10+`.
-4. **`docs/README.md`**:
-   - Corrected all misaligned filenames and links (`05-technical-stack.md`, `06-challenges-and-solutions.md`, `07-model-cloning-and-knowledge-transfer.md`, `08-tech-stack-decision-framework.md`).
-   - Added entries for `11-philosophy-best-of-both-worlds.md` and `12-project-plan-review-and-recommendations.md`.
+During this review and design update cycle, the following updates were resolved directly in the project files:
+1. **`docs/02-architecture.md`**:
+   - Added **Section 0.3**: Implementation Strategy: Biological Inspiration vs. Vectorized Deep Learning.
+   - Added **Section 0.4**: Dual-Process Cognitive Architecture (System 1 intuitive/parallel vs. System 2 deliberative/bounded slots).
+   - Added **Section 0.5**: Foundation-Scaffolded Hybrid Architecture (pre-trained visual/linguistic cortices + dynamic associative cortex).
+   - Added **Section 0.6**: Three Horizons Architectural Mapping.
+2. **`docs/04-implementation-roadmap.md`**:
+   - Restructured Stages 0 through 5 into the **Three Horizons Model**.
+   - Updated Stage 1 specification to native PyTorch `GrowableNetwork` with dynamic residual adapters and EWC.
+   - Aligned Stage 3 with scaffolded open language backbones and concept graphs.
+   - Aligned Stage 4 and 5 with deliberative reasoning, tools, and model cloning.
+   - Restructured Go/No-Go Decision Gates to Horizon 1, 2, and 3 milestone gates.
+3. **`docs/05-development-strategy.md`**:
+   - Replaced scalar single-neuron Python loops with vectorized PyTorch `GrowableNetwork`, `GrowthController`, and `ContinualLearningEngine` in Month 1-2.
+   - Embedded Foundation-Scaffolded Language Strategy into Month 8-10.
+4. **`docs/03-developmental-phases.md`**:
+   - Linked cognitive developmental phases (0 through 5) directly to the Three Horizons model.
+5. **`README.md` & `pyproject.toml`**:
+   - Resolved Python version requirements to `>=3.10`.
+   - Cleaned up duplicated text and renumbered sections sequentially.
+   - Fixed all document links and directory paths (`src/ebrain/`).

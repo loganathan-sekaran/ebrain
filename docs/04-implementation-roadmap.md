@@ -2,11 +2,33 @@
 
 ## Overview
 
-This document outlines a practical, phased approach to building E-Brain from proof-of-concept to full system.
+This roadmap structures E-Brain development into the **Three Horizons Model**, moving progressively from a verified continual learning core to grounded concepts, and finally to scaffolded reasoning and multi-agent ecosystems:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ Horizon 1 (Months 1–3): Core Differentiator Engine                     │
+│ Dynamic Architecture Growth + Continual Learning (Zero Forgetting)     │
+│ Benchmark: Sequential Split-MNIST / Permuted-MNIST / Split-CIFAR100    │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │ Proven Growth & Retention
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ Horizon 2 (Months 4–8): Grounded Agency & Concept Hierarchy            │
+│ Embodied Interaction + Concept Graph Formation (Part-Whole Compositions)│
+│ Benchmark: MiniGrid / BabyAI + Contrastive Concept Disentanglement    │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │ Grounded Concept Engine
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ Horizon 3 (Months 9–14+): Cognitive Reasoning, Tools & Transfer        │
+│ Multi-Stage Deliberation + Tool-Use + Teacher-Student Cloning          │
+│ Benchmark: ARC (Abstraction & Reasoning Corpus) + Domain Specialization│
+└────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Stage 0: Project Setup (Week 1-2)
+## Stage 0: Project Setup (Week 1-2) — [Horizon 1]
 
 ### Goals
 - Set up development environment
@@ -58,73 +80,75 @@ ebrain/
 
 ---
 
-## Stage 1: Proof of Concept - Growth Mechanism (Month 1-2)
+## Stage 1: Proof of Concept - Dynamic Growth Mechanism (Month 1-3) — [Horizon 1: Core Differentiator Engine]
 
 ### Goals
-- Validate core innovation: dynamic architecture growth
-- Demonstrate continual learning without catastrophic forgetting
-- Establish baseline performance metrics
+- Validate core innovation: dynamic architecture growth in vectorized PyTorch
+- Demonstrate continual learning without catastrophic forgetting (<5% backward forgetting)
+- Establish baseline performance metrics on sequential benchmarks
 
 ### Tasks
 
 #### 1.1 Implement Base Architecture (Week 3-4)
-- [ ] Create modular neural network base class
-- [ ] Implement simple transformer module
-- [ ] Add module registry and management
-- [ ] Build forward pass with dynamic routing
+- [ ] Create modular neural network base class (`GrowableNetwork`)
+- [ ] Implement modular expandable blocks (adapters / residual heads / MoE)
+- [ ] Add module registry and dynamic routing
+- [ ] Build forward pass with vectorized tensor routing
 
 ```python
 # Target implementation
 class GrowableNetwork(nn.Module):
-    def __init__(self):
-        self.modules_list = []
+    def __init__(self, base_dim: int):
+        super().__init__()
+        self.modules_list = nn.ModuleList()
         self.module_registry = {}
+        self.router = DynamicRouter()
     
-    def add_module(self, module_type):
-        # Add new module dynamically
+    def add_module(self, module_type: str, spec: dict):
+        # Dynamically inject new module/adapter
         pass
     
-    def forward(self, x):
-        # Route through active modules
+    def forward(self, x: torch.Tensor):
+        # Route through active modules on GPU
         pass
 ```
 
 #### 1.2 Implement Growth Controller (Week 5)
-- [ ] Define growth triggers (performance, capacity, uncertainty)
+- [ ] Define growth triggers (validation loss plateau, capacity saturation, Bayesian/dropout uncertainty)
 - [ ] Implement capacity monitoring
 - [ ] Create module addition logic
-- [ ] Add weight initialization strategies
+- [ ] Add weight initialization strategies (warm start / identity initialization)
 
 #### 1.3 Implement Continual Learning (Week 6)
-- [ ] Elastic Weight Consolidation (EWC)
+- [ ] Elastic Weight Consolidation (EWC) with Fisher Information Matrix
 - [ ] Experience Replay buffer
 - [ ] A-GEM (Averaged Gradient Episodic Memory)
-- [ ] Evaluation metrics for forgetting
+- [ ] Evaluation metrics for backward forgetting and forward transfer
 
 #### 1.4 Proof of Concept Experiments (Week 7-8)
-- [ ] Experiment 1: Sequential MNIST → Fashion-MNIST → CIFAR-10
-- [ ] Experiment 2: Compare growth vs. fixed architecture
-- [ ] Experiment 3: Measure catastrophic forgetting
+- [ ] Experiment 1: Sequential Split-MNIST → Split-FashionMNIST → Split-CIFAR10
+- [ ] Experiment 2: Compare dynamic growth vs. static fixed-size baseline
+- [ ] Experiment 3: Measure catastrophic forgetting (<5% target)
 - [ ] Document results and learnings
 
 ### Success Criteria
-- ✅ Network successfully adds modules when needed
-- ✅ <10% forgetting on previous tasks after learning new ones
-- ✅ Outperforms fixed-size baseline by >5%
-- ✅ Growth triggers activate at appropriate times
+- ✅ Network successfully allocates modules when uncertainty spikes
+- ✅ <5% forgetting on previous tasks after learning subsequent ones
+- ✅ Outperforms fixed-size baseline by >15% on continual learning retention
+- ✅ Growth triggers activate reliably without runaway parameter explosion
 
 ### Deliverables
-- Working growth mechanism
-- Continual learning implementation
+- Working `GrowableNetwork` & `GrowthController` in `src/ebrain/core/`
+- Continual learning benchmark harness & test suite
 - Experimental results report
 - Conference paper draft (optional)
 
 ### Estimated Time
-6 weeks
+6-8 weeks
 
 ---
 
-## Stage 2: MVP - Single Modality Learning (Month 3-6)
+## Stage 2: MVP - Grounded Perception & Agency (Month 4-6) — [Horizon 2: Grounded Agency]
 
 ### Goals
 - Build complete pipeline for one modality (vision)
@@ -264,20 +288,20 @@ class GrowableNetwork(nn.Module):
 
 ---
 
-## Stage 3: Multi-Modal Integration (Month 7-10)
+## Stage 3: Multi-Modal Integration & Concept Graphs (Month 7-9) — [Horizon 2: Concept Hierarchy]
 
 ### Goals
-- Add language and audio modalities
-- Implement cross-modal learning
-- Achieve Phase 3 (language acquisition)
+- Add scaffolded language and audio perception
+- Implement hierarchical concept composition (Level 0 to 3)
+- Achieve Phase 3 (symbol grounding and social agency)
 
 ### Tasks
 
-#### 3.1 Add Language Processing (Month 7)
-- [ ] Text encoder implementation
-- [ ] Tokenizer with expandable vocabulary
-- [ ] Language decoder for generation
-- [ ] Text evaluation metrics
+#### 3.1 Scaffolded Language Processing (Month 7)
+- [ ] Integrate lightweight pre-trained language backbone (e.g. SmolLM-135M / TinyLlama) as linguistic encoder
+- [ ] Tokenizer & embedding projection layers to E-Brain unified space
+- [ ] Language decoding head for generation
+- [ ] Text evaluation metrics on grounded QA
 - [ ] **Sensory-grounded thoughts expansion (Phase 2)**
   - [ ] Implement VisualImageryGenerator class (basic)
   - [ ] Implement TactilePredictor class (basic)
@@ -387,12 +411,12 @@ class GrowableNetwork(nn.Module):
 
 ---
 
-## Stage 4: Abstract Reasoning & Transfer (Month 11-14)
+## Stage 4: Deliberative Reasoning & Tool Use (Month 10-13) — [Horizon 3: Reasoning & Tools]
 
 ### Goals
-- Implement Phase 4 capabilities
-- Achieve transfer learning
-- Develop meta-cognitive abilities
+- Implement Phase 4 capabilities (deliberative multi-stage reasoning & tool orchestration)
+- Achieve cross-domain transfer learning and meta-cognition
+- Develop sandboxed subprocess & API tool execution abilities
 
 ### Tasks
 
@@ -499,12 +523,12 @@ class GrowableNetwork(nn.Module):
 
 ---
 
-## Stage 5: Expertise & Self-Directed Learning (Month 15+)
+## Stage 5: Expertise, Model Cloning & Knowledge Transfer (Month 14+) — [Horizon 3: Transfer & Ecosystem]
 
 ### Goals
-- Implement Phase 5 capabilities
-- Achieve expert-level performance
-- Enable self-directed learning
+- Implement Phase 5 capabilities (domain specialization and self-curriculum)
+- Implement Model Cloning infrastructure for specialized variants
+- Enable Teacher-Student Knowledge Transfer protocol and collaborative ecosystem
 
 ### Tasks
 
@@ -749,19 +773,19 @@ class GrowableNetwork(nn.Module):
 
 ## Decision Points
 
-### Go/No-Go Gates
+### Go/No-Go Gates (Aligned with Three Horizons)
 
-**After Stage 1 (Month 2):**
-- **Go if:** Growth mechanism shows >10% improvement over fixed baseline
-- **No-Go if:** No improvement or unstable training
+**Gate 1: Horizon 1 Review (End of Stage 1, Month 3):**
+- **Go if:** Dynamic growth network demonstrates <5% backward forgetting on Task 1 after training Task 3 on sequential benchmarks (Split-MNIST / Split-CIFAR), outperforming fixed-capacity baselines by >15%.
+- **No-Go if:** Catastrophic forgetting exceeds 10%, growth triggers produce runaway parameter explosion, or dynamic routing fails.
 
-**After Stage 2 (Month 6):**
-- **Go if:** Complete Phase 1-2, minimal forgetting
-- **No-Go if:** Catastrophic forgetting >20% or Phase 2 failure
+**Gate 2: Horizon 2 Review (End of Stage 3, Month 9):**
+- **Go if:** Grounded agency is verified (correlation between self-action and sensory outcome >80%), compositional concept generalization in BabyAI exceeds 80%, and cross-modal alignment with scaffolded linguistic backbones converges.
+- **No-Go if:** Agent fails to distinguish self-caused from environmental events or cannot generalize to unseen compositions of atomic concepts.
 
-**After Stage 3 (Month 10):**
-- **Go if:** Multi-modal integration successful, Phase 3 complete
-- **No-Go if:** Modal alignment fails or language acquisition <60% success
+**Gate 3: Horizon 3 Review (End of Stage 5, Month 14+):**
+- **Go if:** Multi-stage deliberative reasoning verifies solutions, sandboxed tool execution executes accurately, and cloned models successfully transfer concept packages with >80% retention.
+- **No-Go if:** Deliberation fails to outperform single-pass inference, or student models fail to absorb transferred concept graphs.
 
 ### Adaptation Triggers
 

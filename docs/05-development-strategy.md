@@ -45,65 +45,99 @@ E-Brain development follows a clear two-phase approach for each capability:
 
 ## Stage-by-Stage Development Strategy
 
-### Stage 1: Foundation (Month 1-3) - IMPLEMENTATION ONLY
+### Stage 1: Foundation (Month 1-3) - IMPLEMENTATION ONLY — [Horizon 1]
 
 #### Month 1-2: Core Infrastructure Implementation
 
+> [!IMPORTANT]
+> **Vectorized Deep Learning Implementation**:
+> E-Brain models biological principles (neurogenesis, synaptic plasticity, homeostatic scaling) using **vectorized, batch-parallel PyTorch modules** running on GPUs—not slow Python object loops with scalar updates.
+
 **What We're Coding:**
 ```python
-# Week 1-2: Bio-inspired Neuron Implementation
-class BioInspiredNeuron:
-    def __init__(self):
-        self.dendrites = []  # Input branches
-        self.axon = None     # Output
-        self.membrane_potential = 0.0
-        self.spike_history = []
-    
-    def add_dendrite(self, source_neuron, weight):
-        """Code the dendritic structure"""
-        pass
-    
-    def integrate_inputs(self, inputs, dt=0.001):
-        """Code temporal integration (leaky integrator)"""
-        pass
-    
-    def apply_stdp(self, pre_spike_time, post_spike_time):
-        """Code STDP learning rule"""
-        pass
+# Week 1-2: Growable Neural Core (Vectorized PyTorch)
+import torch
+import torch.nn as nn
 
-# Week 3-4: Neurogenesis System Implementation
-class NeurogenesisSystem:
-    def __init__(self):
-        self.neuron_pool = []
-        self.growth_signals = {}
+class GrowableNetwork(nn.Module):
+    """
+    Vectorized growable neural network capable of dynamic capacity expansion.
+    """
+    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int):
+        super().__init__()
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.base_layer = nn.Linear(input_dim, hidden_dim)
+        self.modules_list = nn.ModuleList()
+        self.output_head = nn.Linear(hidden_dim, output_dim)
     
-    def add_neuron(self, layer, position):
-        """Code neuron creation"""
-        pass
+    def add_module(self, module_type: str = "residual_adapter"):
+        """Dynamically allocate and append a new vectorized module/adapter"""
+        new_module = nn.Sequential(
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.ReLU(),
+            nn.Linear(self.hidden_dim, self.hidden_dim)
+        )
+        self.modules_list.append(new_module)
     
-    def prune_weak_connections(self, threshold=0.1):
-        """Code connection pruning"""
-        pass
-    
-    def hebbian_rewiring(self):
-        """Code activity-based rewiring"""
-        pass
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        h = torch.relu(self.base_layer(x))
+        for module in self.modules_list:
+            h = h + module(h)  # Residual dynamic routing
+        return self.output_head(h)
 
-# Week 5-6: Basic Vision Input System
-class VisionInputSystem:
-    def __init__(self, resolution=(64, 64)):
-        self.resolution = resolution
-        self.retina = None  # Will process images
+# Week 3-4: Growth Controller & Continual Learning Engine
+class GrowthController:
+    """
+    Monitors capacity, validation loss plateaus, and uncertainty to trigger growth.
+    """
+    def __init__(self, growth_threshold: float = 0.85):
+        self.growth_threshold = growth_threshold
+        self.loss_history = []
     
-    def preprocess_image(self, raw_image):
-        """Code image preprocessing"""
-        # Resize, normalize, extract features
+    def should_grow(self, val_loss: float, uncertainty: float) -> bool:
+        """Determines if new neural capacity must be allocated"""
+        # Triggers when uncertainty is high and loss ceases to decrease
+        return uncertainty > self.growth_threshold
+
+class ContinualLearningEngine:
+    """
+    Vectorized Elastic Weight Consolidation (EWC) to prevent catastrophic forgetting.
+    """
+    def __init__(self, model: nn.Module, importance: float = 1000.0):
+        self.model = model
+        self.importance = importance
+        self.fisher_matrix = {}
+        self.optimal_params = {}
+    
+    def calculate_fisher(self, dataloader: torch.utils.data.DataLoader):
+        """Vectorized computation of Fisher Information Matrix on GPU"""
         pass
     
-    def encode_to_spikes(self, image):
-        """Code image-to-spike conversion"""
-        # Brighter pixels → higher spike rates
-        pass
+    def compute_ewc_loss(self) -> torch.Tensor:
+        """Penalizes moving critical weights for previously learned tasks"""
+        loss = 0.0
+        for name, param in self.model.named_parameters():
+            if name in self.fisher_matrix:
+                loss += (self.fisher_matrix[name] * (param - self.optimal_params[name]) ** 2).sum()
+        return self.importance * loss
+
+# Week 5-6: Sensory Encoding & Input System (Vectorized)
+class VisionInputSystem(nn.Module):
+    def __init__(self, resolution=(64, 64), embed_dim=128):
+        super().__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(64 * 16 * 16, embed_dim)
+        )
+    
+    def forward(self, images: torch.Tensor) -> torch.Tensor:
+        """Batched GPU feature extraction"""
+        return self.encoder(images)
 
 # Week 7-8: Reward System Infrastructure
 class RewardSystem:
@@ -521,19 +555,20 @@ class TheoryOfMindSystem:
 
 ---
 
-#### Month 8-10: Phase 2-3 Training (Child Language Acquisition)
+#### Month 8-10: Phase 2-3 Training (Child Language Acquisition) — [Horizon 2]
+
+> [!TIP]
+> **Foundation-Scaffolded Strategy**:
+> Rather than training a language model from scratch on 100M tokens—which is insufficient to yield emergent reasoning or Theory of Mind—E-Brain utilizes a compact, open-weight foundation model (e.g., SmolLM-135M/360M or TinyLlama) as a frozen/adapter-tuned linguistic encoder. E-Brain's dynamic layers and concept graphs focus on **multimodal symbol grounding, agency attribution, and Theory of Mind reasoning**.
 
 **Training Data Needed:**
 
 ```python
-# Dataset 1: WikiText-103 (Language Corpus)
-# Source: https://blog.salesforceairesearch.com/the-wikitext-long-term-dependency-language-modeling-dataset/
-# Size: 100M tokens
-# Format: Plain text articles
-
-def prepare_wikitext_data():
+# Dataset 1: Grounded Language & Dialog Corpus (Scaffolded Backbone)
+# Using lightweight open models (SmolLM-135M / TinyLlama) + curated child-directed dialogs
+def prepare_grounded_language_data():
     """
-    Prepare language data for E-Brain
+    Prepare language data for E-Brain symbol grounding
     """
     from datasets import load_dataset
     
@@ -542,7 +577,6 @@ def prepare_wikitext_data():
     # Filter for simple sentences (child-appropriate)
     simple_sentences = []
     for text in wikitext['train']['text']:
-        # Keep sentences with common words only
         if is_simple_sentence(text):
             simple_sentences.append(text)
     

@@ -908,6 +908,95 @@ class DevelopmentalNeuronManager:
 
 This neurogenesis system enables E-Brain to dynamically adapt its structure based on learning needs, mimicking the brain's developmental trajectory from rapid growth in infancy to selective refinement in adulthood.
 
+---
+
+## 0.3 Implementation Strategy: Biological Inspiration vs. Vectorized Deep Learning
+
+A key architectural distinction in E-Brain is between **biological principles** and **computational implementation**:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ Biological Principles (What we model):                                 │
+│ - Activity-dependent plasticity (STDP, Hebbian learning)               │
+│ - Structural growth & synaptic pruning (neurogenesis)                  │
+│ - Developmental progression & sensory grounding                       │
+│ - Homeostatic regulation & sparse activation                          │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │ Realized via
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ Vectorized Deep Learning Engine (How we compute):                      │
+│ - Native PyTorch GPU tensor operations (batch-parallelized)             │
+│ - Growable modular blocks (`GrowableNetwork` with dynamic routing)     │
+│ - Differentiable surrogate gradients for temporal/spiking layers       │
+│ - Efficient memory buffers and vectorized Elastic Weight Consolidation │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+> [!IMPORTANT]
+> **Implementation Rule**: E-Brain does **not** simulate millions of individual Python neuron objects with scalar loop updates. All biological mechanisms—including leaky integration, synaptic plasticity, and modular expansion—are implemented as **vectorized, batched PyTorch tensor operations** to leverage CUDA hardware acceleration.
+
+---
+
+## 0.4 Dual-Process Cognitive Architecture (System 1 vs. System 2)
+
+To resolve the tension between human cognitive constraints (bounded working memory) and machine computational advantages (unlimited vector recall, parallel rollouts), E-Brain adopts a **Dual-Process Cognitive Architecture**:
+
+```
+                               ┌──────────────────────────────────────────────┐
+                               │           E-Brain Dual-Process Engine        │
+                               └──────────────────────┬───────────────────────┘
+                                                      │
+                       ┌──────────────────────────────┴──────────────────────────────┐
+                       ▼                                                             ▼
+┌─────────────────────────────────────────────┐               ┌─────────────────────────────────────────────┐
+│      System 1: Intuitive Substrate          │               │      System 2: Deliberative Controller      │
+│      (Machine-Level Superpowers)            │               │      (Human-Inspired Cognitive Control)     │
+├─────────────────────────────────────────────┤               ├─────────────────────────────────────────────┤
+│ • Sub-millisecond forward pass & perception │               │ • Bounded working memory slots (3 to 7)     │
+│ • Parallel thought rollouts & search        │ ◄───────────► │ • Serial conscious deliberation & attention │
+│ • Vector database retrieval (exact recall)  │   Feedback    │ • Goal priority management & hypothesis eval│
+│ • Subprocess & external tool execution      │   & Control   │ • Multi-stage progressive verification      │
+└─────────────────────────────────────────────┘               └─────────────────────────────────────────────┘
+```
+
+1. **System 1 (Intuitive Substrate)**: Handles sensory encoding, automatic pattern recognition, exact associative memory retrieval, and parallel tree-of-thought exploration without cognitive fatigue.
+2. **System 2 (Deliberative Controller)**: Implements human-like bounded rationality ($3\text{--}7$ concurrent active slots). It serializes high-level reasoning, prevents combinatorial drift, tracks current goals, and guides attention.
+
+---
+
+## 0.5 Foundation-Scaffolded Hybrid Architecture
+
+Rather than training a multi-billion parameter model from scratch on minimal data—which would fail to produce emergent linguistic and abstract reasoning—E-Brain employs a **foundation-scaffolded approach**:
+
+- **Perceptual & Linguistic Cortices**: Lightweight, open-weight foundation models (e.g., SmolLM-135M/360M, MobileNetV4, CLIP ViT-B) provide robust, pre-aligned visual and syntactic representations.
+- **Dynamic Associative Cortex & Growth Core**: E-Brain's primary novel architecture sits atop these representations, developing:
+  - Dynamic module addition (`GrowableNetwork`) for task expansion.
+  - Hierarchical Concept Graphs (compositional symbol grounding).
+  - Continual learning and synaptic consolidation (zero catastrophic forgetting).
+  - Embodied agency and Theory of Mind models.
+
+---
+
+## 0.6 Architectural Alignment: The Three Horizons
+
+The architectural components are staged according to the **Three Horizons Model**:
+
+1. **Horizon 1: Core Differentiator Engine (Months 1–3)**
+   - `GrowableNetwork` with dynamic modular expansion.
+   - Growth triggers: validation loss plateau, Bayesian/dropout uncertainty, and capacity saturation.
+   - Continual learning substrate: Elastic Weight Consolidation (EWC) + Experience Replay buffer.
+2. **Horizon 2: Grounded Perception, Agency & Concept Graph (Months 4–8)**
+   - Interactive grid/environment grounding (BabyAI / MiniGrid).
+   - Sensorimotor agency detector (`AgencyDetector`) tracking self-caused outcomes.
+   - Hierarchical Concept Graph (`ConceptHierarchy`) supporting compositional rules (AND, OR, SPATIAL).
+3. **Horizon 3: Deliberative Reasoning, Tools & Knowledge Transfer (Months 9–14+)**
+   - 5-stage progressive reasoning engine with adaptive depth.
+   - Sandboxed tool integration (subprocess execution, code evaluation, API queries).
+   - Model cloning and teacher-student concept package transfer protocol.
+
+---
+
 ## System Architecture Diagram
 
 ```

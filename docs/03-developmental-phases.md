@@ -4,14 +4,20 @@
 
 E-Brain's learning follows a developmental curriculum inspired by human cognitive development. Each phase builds on previous capabilities while introducing new skills and concepts.
 
-## Phase Timeline
+## Phase Timeline & Strategic Horizons Mapping
 
 ```
+Developmental Phases:
 Birth → Sensory → Motor → Language → Reasoning → Expertise
   0      0-6mo    6-18mo    18mo-3yr    3-7yr      7yr+
   
   ↓        ↓         ↓          ↓          ↓          ↓
 Minimal  Patterns  Actions   Symbols   Concepts   Mastery
+
+Strategic Horizons Alignment:
+├── Horizon 1 (Months 1–3): Core Differentiator Engine (Phases 0–1: Dynamic Growth & Anti-Forgetting)
+├── Horizon 2 (Months 4–8): Grounded Agency & Concept Hierarchy (Phases 2–3: Agency, Grounding, Concepts)
+└── Horizon 3 (Months 9–14+): Deliberative Reasoning & Transfer (Phases 4–5: Tools, Specialization, Cloning)
 ```
 
 ---
