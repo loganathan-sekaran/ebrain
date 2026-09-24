@@ -17,7 +17,7 @@ This document outlines a practical, phased approach to building E-Brain from pro
 
 #### Infrastructure
 - [ ] Set up Git repository with proper .gitignore
-- [ ] Create virtual environment (Python 3.9+)
+- [ ] Create virtual environment (Python 3.10+)
 - [ ] Install core dependencies (PyTorch, transformers, etc.)
 - [ ] Set up experiment tracking (Weights & Biases)
 - [ ] Configure GPU/cloud computing resources
@@ -26,7 +26,7 @@ This document outlines a practical, phased approach to building E-Brain from pro
 ```
 ebrain/
 ├── docs/                  # Documentation (current)
-├── ebrain/               # Source code
+├── src/ebrain/           # Source code
 │   ├── core/            # Core components
 │   ├── models/          # Neural architectures
 │   ├── trainers/        # Training loops

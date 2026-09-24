@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ebrain"
+version = "0.1.0"
+description = "Developmental AI with Dynamic Growth"
+authors = [
+  { name="Loganathan Sekaran", email="loganathan.sekaran@example.com" },
+]
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "torch>=2.0.0",
+    "pytorch-lightning>=2.0.0",
+    "hydra-core>=1.3.0",
+    "omegaconf>=2.3.0",
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.3.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.3.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

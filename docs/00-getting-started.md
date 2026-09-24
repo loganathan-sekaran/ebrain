@@ -21,7 +21,7 @@
   ```
 
 ### Day 2-3: First Component - BioInspiredNeuron
-- [ ] Create `src/core/neuron.py`
+- [ ] Create `src/ebrain/core/neuron.py`
 - [ ] Implement `BioInspiredNeuron` class:
   ```python
   class BioInspiredNeuron:
@@ -63,7 +63,7 @@
 - [ ] Run tests: `pytest tests/test_neuron.py -v`
 
 ### Day 4-5: Vision Input System
-- [ ] Create `src/sensory/vision.py`
+- [ ] Create `src/ebrain/sensory/vision.py`
 - [ ] Implement basic vision encoder:
   ```python
   class VisionInputSystem:
@@ -117,7 +117,7 @@
 - [ ] Document neuron parameters
 
 ### Week 3-4: Neurogenesis System
-- [ ] Create `src/core/neurogenesis.py`
+- [ ] Create `src/ebrain/core/neurogenesis.py`
 - [ ] Implement `NeurogenesisSystem` class:
   - [ ] `add_neuron()` - Create new neurons
   - [ ] `prune_connection()` - Remove weak synapses
@@ -134,7 +134,7 @@
 - [ ] Benchmark performance
 
 ### Week 7-8: Reward System
-- [ ] Create `src/learning/reward_system.py`
+- [ ] Create `src/ebrain/learning/reward_system.py`
 - [ ] Implement `NoveltyDetector` class
 - [ ] Implement `PredictionTracker` class
 - [ ] Implement `RewardSystem` class

@@ -27,11 +27,13 @@ Create a model that mimics human brain development, starting from basic sensory 
 - **[04-implementation-roadmap.md](04-implementation-roadmap.md)** - Detailed implementation plan and milestones
 - **[05-development-strategy.md](05-development-strategy.md)** - ⭐ **Implementation vs training strategy, data requirements, and team structure**
 - **[05-development-strategy-visual.md](05-development-strategy-visual.md)** - 📊 **Visual guide to development workflow and timeline**
-- **[06-technical-stack.md](06-technical-stack.md)** - Technology choices and tools
-- **[07-challenges-and-solutions.md](07-challenges-and-solutions.md)** - Known challenges and mitigation strategies
-- **[08-model-cloning-and-knowledge-transfer.md](08-model-cloning-and-knowledge-transfer.md)** - Model specialization and inter-model knowledge transfer
-- **[09-tech-stack-decision-framework.md](09-tech-stack-decision-framework.md)** - Comprehensive rationale for technology choices
+- **[05-technical-stack.md](05-technical-stack.md)** - Technology choices and tools
+- **[06-challenges-and-solutions.md](06-challenges-and-solutions.md)** - Known challenges and mitigation strategies
+- **[07-model-cloning-and-knowledge-transfer.md](07-model-cloning-and-knowledge-transfer.md)** - Model specialization and inter-model knowledge transfer
+- **[08-tech-stack-decision-framework.md](08-tech-stack-decision-framework.md)** - Comprehensive rationale for technology choices
 - **[10-computational-advantages-and-tool-use.md](10-computational-advantages-and-tool-use.md)** - ⚡ **Superhuman computation + system tool integration**
+- **[11-philosophy-best-of-both-worlds.md](11-philosophy-best-of-both-worlds.md)** - ☯️ **Philosophy: Best of both biological and computational worlds**
+- **[12-project-plan-review-and-recommendations.md](12-project-plan-review-and-recommendations.md)** - 📋 **Comprehensive project plan review, architectural critique & tracking matrix**
 
 ## Project Status
 

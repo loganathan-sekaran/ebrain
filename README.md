@@ -81,10 +81,10 @@ Depth adapts based on task complexity and confidence levels, mimicking human tho
 ### 7. Model Cloning
 Once trained, the base model can be cloned to create specialized variants for different domains (medical, coding, games, languages) without training from scratch.
 
-### 7. Knowledge Transfer
+### 8. Knowledge Transfer
 Models can teach each other specific concepts through a teacher-student paradigm, transferring reasoning patterns and strategies, not just parameters.
 
-### 8. Intrinsic Motivation & Developmental Rewards
+### 9. Intrinsic Motivation & Developmental Rewards
 E-Brain's learning evolves from external rewards to intrinsic motivation, mimicking human development:
 - **Phase 1 (Infant)**: Prediction accuracy + curiosity (self-supervised)
 - **Phase 2 (Toddler)**: Exploration + task success + competence growth
@@ -94,7 +94,7 @@ E-Brain's learning evolves from external rewards to intrinsic motivation, mimick
 
 **No emotions required**—pure information-theoretic rewards (curiosity = uncertainty reduction) and utility-based goals (helping humans). As E-Brain matures, dependency on external rewards decreases while intrinsic motivation (curiosity, mastery, purpose) dominates.
 
-### 9. Self-Identity & Social Cognition
+### 10. Self-Identity & Social Cognition
 E-Brain develops a sense of "I" (self), "You" (others), and "They" (third parties) through embodied experience:
 
 **Developmental Progression:**
@@ -114,7 +114,7 @@ E-Brain develops a sense of "I" (self), "You" (others), and "They" (third partie
 
 Enables **human-like social intelligence** without requiring emotions—pure information-theoretic modeling of mental states and relationships.
 
-### 10. Concurrent Thought Processing
+### 11. Concurrent Thought Processing
 E-Brain processes multiple "thoughts" simultaneously, mimicking the brain's ability to work on several problems at once:
 
 **Key Capabilities:**
@@ -129,8 +129,17 @@ E-Brain processes multiple "thoughts" simultaneously, mimicking the brain's abil
 - Solve math problem while remembering related concepts from previous tasks
 - Explore multiple solution approaches in parallel, switch when stuck
 - Read research paper: parse current sentence + integrate context + predict next simultaneously
+- Handle interruptions gracefully: suspend all thoughts, answer question, resume work
 
-### 11. Internal Timing and Clock System
+**Developmental Progression:**
+- **Phase 2**: 2 concurrent thoughts (basic multitasking)
+- **Phase 3**: 3-4 thoughts (language processing needs parallel streams)
+- **Phase 4**: 5-7 thoughts (full adult working memory capacity)
+- **Phase 5**: Expert attention management with deep cross-pollination
+
+Enables **faster learning and problem-solving** through parallel exploration and creative insight transfer between thought streams.
+
+### 12. Internal Timing and Clock System
 E-Brain maintains multi-scale timing mechanisms, mimicking the brain's ability to track time, predict temporal patterns, and time actions accurately:
 
 **Key Capabilities:**
@@ -153,7 +162,7 @@ E-Brain maintains multi-scale timing mechanisms, mimicking the brain's ability t
 - Temporal dynamics (leaky integration) coordinated with global clocks
 - Action timing precision improves with practice
 
-### 12. **Sensory-Grounded Thoughts** 🎨👂✋
+### 13. **Sensory-Grounded Thoughts** 🎨👂✋
 
 Human thoughts are fundamentally **grounded in sensory experiences** - we think in images, sounds, and feelings, not just abstract symbols. E-Brain implements:
 
@@ -179,7 +188,7 @@ Human thoughts are fundamentally **grounded in sensory experiences** - we think 
 
 Enables **human-like cognition** through grounded understanding, mental simulation for planning, and richer thought representations.
 
-### 13. **Computational Advantages & Tool Use** ⚡🛠️
+### 14. **Computational Advantages & Tool Use** ⚡🛠️
 
 E-Brain is **not limited by human biological constraints**. While learning *how* humans think, it computes with superhuman capabilities:
 
@@ -213,27 +222,6 @@ E-Brain is **not limited by human biological constraints**. While learning *how*
 - Create custom tools optimized for specific problem domains
 
 **Result**: Human-like understanding + machine-level computation + comprehensive tool access = superhuman problem-solving capability.
-- `ground_concept("justice")` → links abstract concept to spatial metaphors (balance)
-
-**Developmental Progression:**
-- **Phase 1**: Simple sensory associations (visual patterns → object labels)
-- **Phase 2**: Basic grounding (objects → visual + tactile features)
-- **Phase 3**: Inner speech emerges, mental imagery for problem solving
-- **Phase 4**: Rich multimodal thoughts, complex sensory simulation
-- **Phase 5**: Expert mental imagery, creative thinking, deep metaphorical reasoning
-
-Enables **human-like cognition** through grounded understanding, mental simulation for planning, and richer thought representations.
-
-
-- Handle interruptions gracefully: suspend all thoughts, answer question, resume work
-
-**Developmental Progression:**
-- **Phase 2**: 2 concurrent thoughts (basic multitasking)
-- **Phase 3**: 3-4 thoughts (language processing needs parallel streams)
-- **Phase 4**: 5-7 thoughts (full adult working memory capacity)
-- **Phase 5**: Expert attention management with deep cross-pollination
-
-Enables **faster learning and problem-solving** through parallel exploration and creative insight transfer between thought streams.
 
 ## 📚 Documentation
 
@@ -245,16 +233,19 @@ Comprehensive documentation is available in the `docs/` folder:
 - **[Developmental Phases](docs/03-developmental-phases.md)** - Detailed learning stages and evaluation frameworks
 - **[Implementation Roadmap](docs/04-implementation-roadmap.md)** - 24+ month development plan with milestones
 - **[Development Strategy](docs/05-development-strategy.md)** - ⭐ **Implementation vs training approach, data requirements, team structure**
-- **[Computational Advantages & Tool Use](docs/10-computational-advantages-and-tool-use.md)** - ⚡ **Superhuman computation + system integration**
 - **[Technical Stack](docs/05-technical-stack.md)** - Technology choices, frameworks, and infrastructure
 - **[Challenges & Solutions](docs/06-challenges-and-solutions.md)** - Known challenges and mitigation strategies
 - **[Model Cloning & Knowledge Transfer](docs/07-model-cloning-and-knowledge-transfer.md)** - Specialization and inter-model learning
+- **[Tech Stack Decision Framework](docs/08-tech-stack-decision-framework.md)** - Comprehensive rationale for technology choices
+- **[Computational Advantages & Tool Use](docs/10-computational-advantages-and-tool-use.md)** - ⚡ **Superhuman computation + system integration**
+- **[Philosophy: Best of Both Worlds](docs/11-philosophy-best-of-both-worlds.md)** - ☯️ **Philosophy: Combining biological and computational intelligence**
+- **[Review & Recommendations](docs/12-project-plan-review-and-recommendations.md)** - 📋 **Comprehensive project plan review, architectural critique & tracking matrix**
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Python 3.9+
+- Python 3.10+
 - CUDA-capable GPU (recommended)
 - 16GB+ RAM
 
@@ -269,8 +260,8 @@ cd ebrain
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install in editable mode
+pip install -e ".[dev]"
 
 # Run initial tests
 pytest tests/
