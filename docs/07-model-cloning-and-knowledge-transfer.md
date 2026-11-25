@@ -1,5 +1,7 @@
 # E-Brain Model Cloning and Knowledge Transfer
 
+> **November 2026 note.** Cloning is rescoped to **same-lineage adapter clones plus output distillation** (H3). Cross-architecture concept-package transfer is a research question, and the extraction and alignment code here does not work as written. See [13 §5.5](13-design-review-2026-11.md#55-cloning-and-knowledge-transfer-doc-07) (TRK-22). The timeline is in [PLAN.md](PLAN.md); the months in this document are obsolete. Concept and adapter packages must be signed and loaded with `weights_only=True` (TRK-23).
+
 ## Overview
 
 This document explores advanced capabilities for E-Brain: creating domain-specific expert clones and enabling knowledge transfer between models, mimicking how human teachers transfer specific concepts to students.

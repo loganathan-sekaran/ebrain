@@ -1,5 +1,10 @@
 # Computational Advantages and Tool Use
 
+> **November 2026 note: superseded in part. Do not implement the tool code in this document as written.**
+> - "Unlimited working memory", "perfect recall", "1000+ parallel thoughts" and the sub-millisecond latency claims are replaced by the System 1 / System 2 design in [02 §0.2](02-architecture.md#02-dual-process-cognitive-architecture-system-1-vs-system-2).
+> - The subprocess, API and file-tool designs here are **unsafe**. Examples: an allowlist that includes `python`, no sandbox, inherited secrets, unbounded retries, and live fuzzing.
+> - No tool code may be written until the tool governance spec (TRK-17) is approved. See [13 §6.1](13-design-review-2026-11.md#61-tool-governance-add-a-spec-before-any-h3-tool-code) and [PLAN.md §5](PLAN.md#5-decisions-on-record).
+
 ## Philosophy: Best of Both Worlds
 
 E-Brain combines **human-like learning** with **superhuman computational capabilities**:

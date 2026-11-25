@@ -1,5 +1,11 @@
 # E-Brain Philosophy: Best of Both Worlds
 
+> **November 2026 note.** The principles "use all tools", "never limit" and "don't limit working memory to 7" are withdrawn:
+> - Side-effecting tools run only behind governance (TRK-17, [13 §6.1](13-design-review-2026-11.md#61-tool-governance-add-a-spec-before-any-h3-tool-code)).
+> - System 2 keeps a bounded, configurable number of active goal slots ([02 §0.2](02-architecture.md#02-dual-process-cognitive-architecture-system-1-vs-system-2)).
+>
+> Schedule and scope are in [PLAN.md](PLAN.md).
+
 ## The Core Principle
 
 ```

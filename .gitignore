@@ -73,3 +73,7 @@ wandb/
 checkpoints/
 results/
 logs/
+
+# Hydra run outputs
+outputs/
+multirun/

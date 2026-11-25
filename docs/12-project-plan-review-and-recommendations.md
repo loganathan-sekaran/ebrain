@@ -1,7 +1,7 @@
 # E-Brain: Project Plan Review & Strategic Recommendations
 
 ## Document Information
-- **Status**: Active / Tracking
+- **Status**: Superseded for tracking by [13-design-review-2026-11.md §10](13-design-review-2026-11.md#10-proposed-action-items). Status column corrected in November 2026 (TRK-24).
 - **Review Date**: September 24, 2026
 - **Review Scope**: Entire E-Brain planning documentation suite (`docs/00` to `docs/11`), repository configuration, and implementation roadmaps.
 
@@ -107,14 +107,13 @@ This comprehensive review evaluated the technical feasibility, architectural coh
 |:---|:---|:---|:---|:---|:---|:---|
 | **TRK-01** | Documentation | Realign broken doc links in `docs/README.md` and `README.md` | P0 | ✅ Completed | Platform | Immediate |
 | **TRK-02** | Documentation | Remove duplicate text sections in `README.md` | P0 | ✅ Completed | Platform | Immediate |
-| **TRK-03** | Standards | Unify Python version across `pyproject.toml`, `README.md`, and roadmaps to Python 3.10+ | P0 | ✅ Completed | Platform | Immediate |
-| **TRK-03** | Standards | Unify Python version across `pyproject.toml`, `README.md`, and roadmaps to Python 3.10+ | P0 | ✅ Completed | Platform | Immediate |
-| **TRK-04** | Architecture | Formulate Horizon 1 `GrowableNetwork` specification in native PyTorch | P0 | ✅ Completed (Design) | ML Core | Month 1 |
-| **TRK-05** | Architecture | Decouple biological spiking research from main modular PyTorch engine | P1 | ✅ Completed (Design) | ML Core | Month 1 |
-| **TRK-06** | Framework | Set up testing and quality gate infrastructure (`pytest`, `ruff`, CI workflow) | P1 | 📋 Planned | DevOps/ML | Month 1 |
+| **TRK-03** | Standards | Unify Python version across `pyproject.toml`, `README.md`, and roadmaps (superseded: Python 3.10 reached end of life in October 2026, so the target is now 3.12+, see TRK-15) | P0 | ✅ Completed → superseded | Platform | Immediate |
+| **TRK-04** | Architecture | Formulate Horizon 1 `GrowableNetwork` specification in native PyTorch (now [14-horizon-1-spec.md](14-horizon-1-spec.md), TRK-12/13) | P0 | 🟡 Draft for review | ML Core | Month 1 |
+| **TRK-05** | Architecture | Decouple biological spiking research from main modular PyTorch engine (moved to Appendix A, TRK-14) | P1 | ✅ Completed (Nov 2026) | ML Core | Month 1 |
+| **TRK-06** | Framework | Set up testing and quality gate infrastructure (`pytest`, `ruff`, CI workflow) (TRK-15) | P1 | 🟡 In progress | DevOps/ML | Month 1 |
 | **TRK-07** | Benchmarking | Implement continual learning baseline runner (Split-MNIST / Split-CIFAR) | P1 | 📋 Planned | ML Core | Month 2 |
 | **TRK-08** | Methodology | Specify Concept Node schema and Composition Engine data structure | P1 | 📋 Planned | Architecture | Month 3 |
-| **TRK-09** | Architecture | Align working memory model: define System 1 (parallel) vs System 2 (bounded slots) | P2 | ✅ Completed (Design) | Architecture | Month 4 |
+| **TRK-09** | Architecture | Align working memory model: define System 1 (parallel) vs System 2 (bounded slots). Defined in doc 02 §0.2; docs 10, 11 and parts of 03 still to align. | P2 | 🟡 In progress | Architecture | Month 4 |
 | **TRK-10** | Scaffolding | Evaluate small open foundation models (SmolLM / TinyLlama) for language scaffold | P2 | 📋 Planned | ML Research | Month 6 |
 
 ---

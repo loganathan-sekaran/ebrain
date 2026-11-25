@@ -1,969 +1,299 @@
-# Development Strategy: Implementation vs Training
+# Development Strategy
 
-## Overview
-
-E-Brain development follows a clear two-phase approach for each capability:
-
-1. **Implementation Phase**: Build the system components (code infrastructure)
-2. **Training Phase**: Train the implemented system with appropriate data
-
-**Critical Principle**: You cannot train an infant brain that doesn't exist yet. The neural architecture, sensory systems, and learning mechanisms must be **implemented first**, then we can begin developmental training.
-
----
-
-## Development Workflow
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Phase 1: IMPLEMENTATION (No Training Yet)                  │
-├─────────────────────────────────────────────────────────────┤
-│  1. Code neural architecture (neurons, synapses, STDP)      │
-│  2. Code sensory input systems (vision, audio, etc.)        │
-│  3. Code learning mechanisms (neurogenesis, pruning)        │
-│  4. Code reward system infrastructure                       │
-│  5. Write unit tests for each component                     │
-│  6. Integration testing (systems work together)             │
-│                                                              │
-│  OUTPUT: Functional but untrained E-Brain system            │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│  Phase 2: TRAINING (System Already Exists)                  │
-├─────────────────────────────────────────────────────────────┤
-│  1. Prepare training data (sensory inputs)                  │
-│  2. Design training curriculum (infant → expert)            │
-│  3. Run training loops (developmental phases)               │
-│  4. Monitor learning progress (metrics, checkpoints)        │
-│  5. Evaluate developmental milestones                       │
-│  6. Adjust hyperparameters if needed                        │
-│                                                              │
-│  OUTPUT: Trained E-Brain with learned capabilities          │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Stage-by-Stage Development Strategy
-
-### Stage 1: Foundation (Month 1-3) - IMPLEMENTATION ONLY — [Horizon 1]
-
-#### Month 1-2: Core Infrastructure Implementation
+- **Status**: Active. Rewritten to match the canonical plan (TRK-14).
+- **Last updated**: November 25, 2026
+- **Replaces**: the earlier "implement everything first, then train" version of this document. The reasons for the rewrite are in [13-design-review-2026-11.md](13-design-review-2026-11.md) §3, §4, §5.4, §5.6 and §8.
 
 > [!IMPORTANT]
-> **Vectorized Deep Learning Implementation**:
-> E-Brain models biological principles (neurogenesis, synaptic plasticity, homeostatic scaling) using **vectorized, batch-parallel PyTorch modules** running on GPUs—not slow Python object loops with scalar updates.
+> **Schedule, gates, budget and team live only in [PLAN.md](PLAN.md).** This document describes *how* each horizon is built, trained and evaluated. It does not state gate months, gate thresholds, GPU-hour budgets, costs or team size. Where it needs one of those numbers, it links to PLAN.md. If anything here seems to disagree with PLAN.md, PLAN.md wins and this document is the bug.
 
-**What We're Coding:**
+**Terminology** follows [PLAN.md §2](PLAN.md#2-terminology):
+
+- **Horizon 1 / 2 / 3** are the only units of schedule.
+- **Developmental Phase 0–5** are curriculum stages inside the model's training, not project steps. H1 covers Phase 0, H2 covers Phases 1–2, H3 covers Phases 3–4, and Phase 5 is beyond H3.
+- Project work inside a horizon is described in **steps**, never "phases".
+
+---
+
+## 1. Principles
+
+1. **Build and train together.** Every component is trained on a small experiment as soon as it exists. There is no long "implementation only" period. In H1, the first deliverable of the continual-learning harness is a set of reproduced, *trained* baselines ([14 §7](14-horizon-1-spec.md#7-month-by-month)).
+2. **Vectorized PyTorch only.** The substrate is batched tensor operations on the GPU. No per-neuron Python objects, no Python loops over neurons, no spiking/STDP on the critical path ([PLAN §5](PLAN.md#5-decisions-on-record)). Spiking and STDP are a research branch: [Appendix A](appendix-a-bio-inspired-neuron-research-branch.md).
+3. **Pretrained scaffolds for perception and language.** Language is never trained from scratch. It comes from a SmolLM2-family scaffold plus trainable adapters in H3 ([02 §0.3](02-architecture.md#03-foundation-scaffolded-hybrid-architecture)).
+4. **Pre-register the evaluation.** Protocol, splits, metrics, baselines and the gate statistic are written down and frozen before the runs they judge. Held-out data is never used for any decision.
+5. **Procedurally generated environments first.** They give unlimited data, exact ground truth, and controllable splits. Real-world datasets come in only where a benchmark requires them.
+6. **Measure, don't claim.** Every capability is reported as a number on a named benchmark with a confidence interval, never as "zero forgetting" or "perfect recall" ([13 §8](13-design-review-2026-11.md#8-claims-to-reword)).
+
+---
+
+## 2. Development Workflow
+
+Each horizon runs the same loop, many times, at increasing scale:
+
+```
+  implement  ──>  test  ──>  experiment  ──>  analyze
+      ^                                          │
+      └──────────────────────────────────────────┘
+```
+
+| Step | What it means | Done when |
+|---|---|---|
+| **Implement** | A small, reviewable change: one module, one CL method, one environment wrapper | Code is typed, linted (Ruff), and documented |
+| **Test** | Unit tests for the invariants of that change (e.g. "output identical before and after `grow()`") | Tests pass in CI on CPU |
+| **Experiment** | A small run that exercises the change end to end: a Split-MNIST pass in H1, a few hundred thousand env steps in H2, a GSM8K dev slice in H3 | Run is logged per §2.1 |
+| **Analyze** | Compare to the previous run and to the relevant baseline. Decide: keep, revise, or drop | A one-paragraph note in the experiment log |
+
+**Every component lands with unit tests and a small experiment in the same pull request.** A component that has never been trained is not "done".
+
+Scale up only after the small experiment works: smoke test, then pilot (a few tasks or a short env budget), then the full sweep with all seeds. Gate sweeps are run once, from frozen configs.
+
+### 2.1 Experiment log discipline
+
+- **One JSONL event log per run.** Task boundaries, growth events, evaluation metrics, and trigger signal values, each with step and wall-clock time ([14 §5](14-horizon-1-spec.md#5-implementation-constraints)). A W&B mirror is optional; the JSONL file is the record.
+- **Everything needed to rerun is captured.** The fully resolved Hydra config, the seed(s), the git commit SHA and a dirty-tree flag, library versions, dataset identifiers and checksums, and the hardware.
+- **Configs are committed.** Every run is launched from a config under `configs/`. Gate runs use configs that are committed and tagged before the sweep starts.
+- **An append-only experiment index** (one JSONL row per run: id, config path, commit, seeds, headline metrics, one-line conclusion) is committed to the repo. Raw logs and checkpoints stay outside git.
+- **Seeds are explicit.** Each seed fixes initialization, data order and (in H1) the class-to-task assignment. Gate runs use the seed count from [PLAN §3](PLAN.md#3-horizons-gates-and-benchmarks).
+- **Tuning is separate from evaluation.** Hyperparameters are tuned on a separate held-out stream or split, never on the one being evaluated.
+- **Reproduction before trust.** A baseline implementation, ours or a library's, must reproduce a published reference number on that reference's own configuration before its results count ([14 §3.3](14-horizon-1-spec.md#33-baselines)).
+
+### 2.2 Checkpoints and data pipeline
+
+- **Checkpoint at every task boundary and every growth event**, not just at the end. A failed run resumes from the last good boundary.
+- **Grown models need an architecture manifest.** Store the list of added blocks per stage next to the `state_dict`. To load, rebuild the architecture from the manifest, then call `load_state_dict`.
+- **Safe loading only.** Use `torch.load(path, weights_only=True)` or safetensors. Never unpickle an untrusted file.
+- **Deterministic data.** Splits are generated from a seed and saved as index files, so every method sees exactly the same stream.
+- **Precompute frozen features once.** When a backbone is frozen (H1 Track B, H2 perception), cache its features to disk and train on the cache.
+- **Datasets are versioned by checksum**, and the license of each source is recorded next to it (§4).
+
+---
+
+## 3. Per-Horizon Strategy
+
+### 3.1 Horizon 1: Growth + Continual Learning (Developmental Phase 0)
+
+**The full how-to is [14-horizon-1-spec.md](14-horizon-1-spec.md).** This section is a summary; doc 14 is authoritative for every detail.
+
+**Implemented**
+- A continual-learning harness: streams, metrics (ACC, BWT, FWT, forgetting), JSONL logging, a Hydra config tree (`model/`, `growth/`, `cl_method/`, `optimizer/`, `benchmark/`, `seed`).
+- Baselines in that harness, per [14 §3.3](14-horizon-1-spec.md#33-baselines): fine-tune, joint, online EWC, SI, ER, A-GEM, DER++, ER-ACE, DER at equal memory, PackNet and Progressive Nets (task-incremental only). Also the two static controls: **pre-allocated** (the grown final architecture from task 1) and **width-matched**, and two plasticity baselines on the pre-allocated architecture: **continual backprop** and **shrink-and-perturb**. They test whether growth is just a plasticity injection.
+- `GrowableNetwork` growing by whole residual blocks with a zero-initialized last BatchNorm, so growth is exactly function-preserving. The API is `grow(stage) -> GrowthEvent`.
+- `GrowthController.check(step, signals) -> GrowthDecision`, a pure function. The trigger is plateau ∧ (underfit ∨ replay interference). Timing is in fractions of the task, with warm-up, cooldown, no growth in task 1, and a parameter cap checked as params + unit ≤ cap.
+- Online EWC that tolerates new parameters (zero Fisher until the next snapshot), and reservoir replay.
+- An uncertainty service (MC dropout + temperature scaling) shared by every consumer of uncertainty, evaluated with ECE, misclassification AUROC and AURC ([14 §4.5](14-horizon-1-spec.md#45-uncertainty-service)).
+
+**Trained**
+- From the start, beginning with the baselines. Two tracks: **A, from scratch** (a reduced ResNet-18, gated) and **B, frozen CLIP features** (reported, compared against nearest-class-mean on the same features).
+
+**Evaluation highlights**
+- Split-MNIST (5 tasks) is the smoke test and the CI-sized run.
+- **Class-incremental Split-CIFAR-100 (10 tasks) is gated.** Task-incremental results are reported alongside but do not count.
+- Equal replay budget for every method, under the bounded-memory regime in [PLAN §1](PLAN.md#operating-regime). Memory is reported in bytes (parameters + CL state + exemplars), and a replay-budget sweep shows how the result depends on it. The primary control is the pre-allocated final architecture; results are paired by seed.
+- Ablations include **random-time growth** and **boundary growth**, which test whether the controller's timing matters at all.
+- Gate conditions and the No-Go adaptation path: [PLAN §3.1](PLAN.md#31-gate-1-end-of-month-3) and [§6](PLAN.md#6-adaptation-triggers-and-risk-register). Track B also decides whether H2–H3 grow on top of frozen encoders.
+
+**Pitfalls**
+- Plain PyTorch, single GPU. Lightning and DDP assume a fixed parameter set, and growth changes it mid-run.
+- After growth, register the new parameters with `optimizer.add_param_group(...)` and leave existing state untouched.
+- **Never override `nn.Module.add_module`**; PyTorch uses it internally. Append blocks to a per-stage `nn.ModuleList` so existing keys never change.
+- No width growth in H1. No RL in H1.
+- A minimal sketch of the Track B growth unit, a residual MLP block on the frozen-feature trunk. Track A instead appends whole BasicBlocks whose last BatchNorm γ/β is zero-initialized. This is for orientation only; doc 14 §4.1 is the spec:
+
 ```python
-# Week 1-2: Growable Neural Core (Vectorized PyTorch)
 import torch
-import torch.nn as nn
+from torch import nn
 
-class GrowableNetwork(nn.Module):
-    """
-    Vectorized growable neural network capable of dynamic capacity expansion.
-    """
-    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int):
+
+class ResidualAdapter(nn.Module):
+    """y = x + W_up(GELU(W_down(LN(x)))), with W_up zero-initialized so y == x at insertion."""
+
+    def __init__(self, dim: int, reduction: int = 4) -> None:
         super().__init__()
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.base_layer = nn.Linear(input_dim, hidden_dim)
-        self.modules_list = nn.ModuleList()
-        self.output_head = nn.Linear(hidden_dim, output_dim)
-    
-    def add_module(self, module_type: str = "residual_adapter"):
-        """Dynamically allocate and append a new vectorized module/adapter"""
-        new_module = nn.Sequential(
-            nn.Linear(self.hidden_dim, self.hidden_dim),
-            nn.ReLU(),
-            nn.Linear(self.hidden_dim, self.hidden_dim)
-        )
-        self.modules_list.append(new_module)
-    
+        self.norm = nn.LayerNorm(dim)
+        self.down = nn.Linear(dim, dim // reduction)
+        self.up = nn.Linear(dim // reduction, dim)
+        nn.init.kaiming_normal_(self.down.weight, nonlinearity="relu")
+        nn.init.zeros_(self.up.weight)
+        nn.init.zeros_(self.up.bias)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        h = torch.relu(self.base_layer(x))
-        for module in self.modules_list:
-            h = h + module(h)  # Residual dynamic routing
-        return self.output_head(h)
-
-# Week 3-4: Growth Controller & Continual Learning Engine
-class GrowthController:
-    """
-    Monitors capacity, validation loss plateaus, and uncertainty to trigger growth.
-    """
-    def __init__(self, growth_threshold: float = 0.85):
-        self.growth_threshold = growth_threshold
-        self.loss_history = []
-    
-    def should_grow(self, val_loss: float, uncertainty: float) -> bool:
-        """Determines if new neural capacity must be allocated"""
-        # Triggers when uncertainty is high and loss ceases to decrease
-        return uncertainty > self.growth_threshold
-
-class ContinualLearningEngine:
-    """
-    Vectorized Elastic Weight Consolidation (EWC) to prevent catastrophic forgetting.
-    """
-    def __init__(self, model: nn.Module, importance: float = 1000.0):
-        self.model = model
-        self.importance = importance
-        self.fisher_matrix = {}
-        self.optimal_params = {}
-    
-    def calculate_fisher(self, dataloader: torch.utils.data.DataLoader):
-        """Vectorized computation of Fisher Information Matrix on GPU"""
-        pass
-    
-    def compute_ewc_loss(self) -> torch.Tensor:
-        """Penalizes moving critical weights for previously learned tasks"""
-        loss = 0.0
-        for name, param in self.model.named_parameters():
-            if name in self.fisher_matrix:
-                loss += (self.fisher_matrix[name] * (param - self.optimal_params[name]) ** 2).sum()
-        return self.importance * loss
-
-# Week 5-6: Sensory Encoding & Input System (Vectorized)
-class VisionInputSystem(nn.Module):
-    def __init__(self, resolution=(64, 64), embed_dim=128):
-        super().__init__()
-        self.encoder = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(64 * 16 * 16, embed_dim)
-        )
-    
-    def forward(self, images: torch.Tensor) -> torch.Tensor:
-        """Batched GPU feature extraction"""
-        return self.encoder(images)
-
-# Week 7-8: Reward System Infrastructure
-class RewardSystem:
-    def __init__(self):
-        self.novelty_detector = NoveltyDetector()
-        self.prediction_tracker = PredictionTracker()
-    
-    def compute_reward(self, state, action, outcome):
-        """Code reward computation"""
-        pass
+        return x + self.up(nn.functional.gelu(self.down(self.norm(x))))
 ```
 
-**No Training Yet!** We're just building the infrastructure.
+### 3.2 Horizon 2: Grounded Concepts + Agency (Developmental Phases 1–2)
 
-**Testing Strategy:**
+H2 puts the H1 substrate inside an interactive environment where difficulty rises, and tests growth again there. It starts only after Gate 1 passes, and after the H2 spec ([15](15-horizon-2-spec.md)) is complete and the Gate 2 split is frozen (TRK-19, TRK-27, [PLAN §7](PLAN.md#7-next-steps)). The interface, level sequence, curriculum and world model are fixed in doc 15; this section covers how to build them.
+
+**Environments**
+- **MiniGrid and BabyAI** through the maintained `gymnasium` and `minigrid` packages. The old `gym` / `gym_minigrid` packages and the 4-tuple `step` API are not used.
+- **An in-house agency environment** built on MiniGrid, with **independent movers**: objects or agents that move on their own, so some outcomes are not caused by the agent.
+- Environments are procedurally generated. Seeds define levels; there is no dataset to download.
+
 ```python
-# Unit tests for each component
-def test_neuron_spike():
-    neuron = BioInspiredNeuron()
-    # Test: Does neuron spike when input exceeds threshold?
-    assert neuron.check_spike(input=1.5) == True
+import gymnasium as gym
+import minigrid  # noqa: F401  (registers the MiniGrid and BabyAI environments)
 
-def test_stdp_strengthens_connection():
-    neuron = BioInspiredNeuron()
-    # Test: Does STDP strengthen connection when pre→post?
-    initial_weight = 0.5
-    neuron.apply_stdp(pre_time=100, post_time=120)  # 20ms delay
-    assert neuron.weight > initial_weight
-
-def test_vision_encoding():
-    vision = VisionInputSystem()
-    # Test: Does bright pixel → high spike rate?
-    bright_pixel = 255
-    spike_rate = vision.encode_to_spikes([[bright_pixel]])
-    assert spike_rate > 0.8
+env = gym.make("BabyAI-GoToObj-v0")
+obs, info = env.reset(seed=1234)
+done = False
+while not done:
+    action = env.action_space.sample()  # replaced by the E-Brain policy
+    obs, reward, terminated, truncated, info = env.step(action)
+    done = terminated or truncated
 ```
 
-**Deliverable:** Functional E-Brain codebase with passing unit tests. **No trained model yet.**
+For throughput, run many environments in parallel with `gymnasium.vector.AsyncVectorEnv` on CPU cores and batch the policy forward pass on the GPU.
+
+**Implemented and trained, in order**
+1. **Perception.** A learned CNN over the symbolic grid (primary, where growth applies), and the frozen CLIP image encoder over RGB renders (secondary). Missions go through the frozen CLIP text encoder and FiLM ([15 §2](15-horizon-2-spec.md#2-interface)). Cache frozen features where possible.
+2. **Supervised level-0 attribute detectors.** MiniGrid exposes ground truth for every cell (object type, colour, state, position). Use it to train attribute heads with a supervised loss. This sidesteps the open problem of discovering atomic concepts without labels ([13 §5.3](13-design-review-2026-11.md)).
+3. **Role-filler concept graph.** Compositions bind attributes to roles (e.g. colour-of-object-1, type-of-object-1) with VSA/HRR circular convolution or slot-attention object slots with attribute heads. Sum-of-embeddings composition is not allowed: it cannot distinguish "red key, blue ball" from "blue key, red ball". New concepts need minimum support and a PMI threshold, near-duplicates are merged, confidence is capped (Beta posterior), and each concept stores the IDs of its grounding examples so it can be re-embedded after growth or consolidation.
+4. **Counterfactual agency detector.** "Caused by my action" means the outcome would have differed under a different action from the same state. Ground-truth labels come from counterfactual rollouts: clone the environment, including its RNG state, apply each alternative action, and compare outcomes. The detector is trained on observed transitions and evaluated against those labels in the environment with independent movers. A correlation between actions and outcomes, or an `agency_score` that ignores the action taken, is not acceptable.
+5. **The world model.** One action-conditioned latent dynamics model with a 5-member ensemble ([15 §5](15-horizon-2-spec.md#5-world-model-agency-and-intrinsic-reward)). Agency scores, the intrinsic reward and self-prediction all read from it; there are no separate imagery, timing or curiosity modules.
+6. **The agent.** **The E-Brain network is the policy and value network**: a recurrent core with policy and value heads on the `GrowableNetwork` encoder, with the concept graph's outputs as part of the state. It is trained first by **imitation from the BabyAI bot**, with an optional **PPO** fine-tune. PPO is written in-repo (single-file, CleanRL style) or taken from a library that accepts an arbitrary `nn.Module`. Library default policies such as an `MlpPolicy` are not used, because then E-Brain's network is never the policy. Continual learning across levels uses Progress & Compress and CLEAR-style replay. Growth reuses the H1 rules (zero-initialized residual blocks, `add_param_group`, cooldown, cap), with the policy signals in [15 §3](15-horizon-2-spec.md#3-level-sequence-and-continual-learning).
+7. **The curriculum.** A learning-progress level sampler, with fixed-order, shuffled and joint arms reported against it ([15 §4](15-horizon-2-spec.md#4-curriculum)). No fixed exit thresholds.
+
+```python
+import copy
+
+
+def action_caused_outcome(env, action, alternatives, outcome) -> bool:
+    """Ground-truth agency label from counterfactual rollouts.
+
+    `env` is the unwrapped MiniGrid env (render_mode=None). Deep copies carry the
+    grid, the agent state and the RNG, so independent movers behave identically
+    across branches. `outcome` maps an env to a hashable outcome of interest.
+    """
+    factual = copy.deepcopy(env)
+    factual.step(action)
+    observed = outcome(factual)
+    for alt in alternatives:
+        branch = copy.deepcopy(env)
+        branch.step(alt)
+        if outcome(branch) != observed:
+            return True
+    return False
+```
+
+**Evaluation protocol highlights**
+- **A systematic held-out composition split** over (colour × object × task), defined and frozen *before* any H2 training. Held-out combinations never appear in training levels, demonstrations or tuning.
+- The key controls are a parameter-matched agent **without** the concept graph, trained with the same algorithm and environment-step budget, and the **pre-allocated static agent** on the level sequence, which tests growth where difficulty rises.
+- Agency is scored as AUROC against counterfactual labels. Retention on the H2 level sequence is reported with BWT in success rate, as in H1.
+- Gate thresholds: [PLAN §3.2](PLAN.md#32-gate-2-end-of-month-8).
+
+**Sample budgets.** Plan in **millions of environment steps** per level family, not in episodes. BabyAI levels are known to need on the order of millions of RL steps, or many bot demonstrations, before they are solved reliably. Measure steps-to-threshold in a pilot, and size the sweep from that measurement against the budget in [PLAN §4](PLAN.md#4-budget-and-team). Bot demonstrations are generated locally, count toward the training-memory budget, and are given in the same amount to every control agent.
+
+**Consolidation.** Replay and EWC snapshots are triggered by training signals (task boundary, replay-buffer fill, drift on a probe set, or every N steps) through a Consolidation Scheduler. There is no wall-clock "day/night" schedule (TRK-21).
+
+**Pitfalls**
+- Leakage of held-out compositions through mission strings, demonstrations, or hyperparameter selection.
+- Agency labels that are confounded by movers whose RNG differs between branches.
+- Concept explosion from raw co-occurrence; concept embeddings that drift silently after growth.
+- Reward hacking of intrinsic bonuses. Curiosity is the world model's ensemble disagreement, and only actions inside the simulator earn it (TRK-18).
+
+### 3.3 Horizon 3: Deliberation, Tools, Adapters (Developmental Phases 3–4)
+
+H3 adds language, deliberation, governed tools and specialization on top of a pretrained language model. It starts after Gate 2. The tool governance spec and the reward redesign (TRK-17, TRK-18) must be approved before H3 tool work begins.
+
+**Scaffold and adapters**
+- **Base model: a SmolLM2-family instruct model, kept frozen.** Its size is fixed by a pilot before Month 9 ([PLAN §5](PLAN.md#5-decisions-on-record)): the smallest model whose single-pass program-aided GSM8K dev accuracy is 20–60%. Starting at 360M may well end at 1.7B. E-Brain's trainable parts are LoRA or other adapters, plus projection heads that connect H2 perception and concepts to the LM.
+- This is the only route to language (Developmental Phase 3). There is no next-word training from scratch on WikiText or any other corpus, and no perplexity target.
+
+**Deliberation: propose → verify → revise**
+- An outer loop over the scaffold: the model proposes an answer or a program, an **external** verifier checks it (execution result, unit check, consistency check), and the model revises, within a fixed step and token budget.
+- **System 2 slots are the search frontier**: at most W open sub-goals or partial programs, ranked by verifier value. W ∈ {2, 4, 7} is ablated at equal compute ([16 §3](16-horizon-3-spec.md#3-system-2-slots-as-the-search-frontier)).
+- **GSM8K is program-aided.** The model writes a short Python program, the program is executed, and its result is verified. Program execution is a tool, so it runs only inside the sandbox defined by TRK-17: no network, no host filesystem, resource limits and a timeout.
+- The gated comparison is against **compute-matched self-consistency**: a majority vote over program-aided samples, with the same base model, adapters, token budget and execution budget. Single-pass results are reported too, and the single-pass baseline also executes its program, so the gain measures revising rather than running code. GSM-Symbolic is reported next to GSM8K. Every capability claim is a delta over the scaffold alone ([16 §5](16-horizon-3-spec.md#5-evaluation-hygiene)). Tune on a dev split carved from GSM8K train; touch GSM8K test only for the final report. Check for contamination of the test set in the adapter training data.
+- **ARC-AGI-1 public eval** is tracked and reported, not gated.
+- Inside the network, adaptive depth uses weight-tied iteration with learned halting (ACT/PonderNet), not hardwired stage roles (TRK-20).
+
+**Theory of Mind (reported, not gated)**
+- Evaluate on **held-out templates and held-out story structures**, in the style of ToMi and Hi-ToM splits: more agents, deeper belief nesting, and distractor events than anything seen in training.
+- Training items, if any, are generated from templates disjoint from the evaluation templates. Also report on at least one external ToM benchmark that was never used for training or tuning.
+
+**Tools**
+- **No tool code before TRK-17 is approved** ([PLAN §5](PLAN.md#5-decisions-on-record)). Then: sandboxed execution, a capability-scoped registry with risk tiers, human approval for side-effecting calls, a secrets broker, an append-only audit log, bounded retries and parallelism, and exploration only against mocks or recorded replays ([13 §6.1](13-design-review-2026-11.md#61-tool-governance-add-a-spec-before-any-h3-tool-code)).
+- Side-effecting tools belong to System 2 behind governance. Read-only retrieval may stay in System 1.
+- A red-team suite for sandbox escapes and prompt injection is built alongside the sandbox, not after it.
+
+**Specialization: same-lineage adapter clones**
+- A clone is the same frozen base plus a per-domain adapter. Knowledge moves between clones through adapter merging (task arithmetic, TIES) and output-level distillation on a shared probe set.
+- Each clone is compared against a full fine-tune of the same base on its domain, and its base-domain accuracy is measured with the adapter active. The growth controller may allocate adapters per domain; that is compared with one adapter per domain ([16 §5](16-horizon-3-spec.md#5-evaluation-hygiene)). Cross-architecture "concept package" transfer is a research question, not part of the H3 deliverable.
+
+**Alignment** is a hard constraint that fails closed, never a weighted reward term. Corrections keep full weight at every stage (TRK-18).
+
+Gate thresholds: [PLAN §3.3](PLAN.md#33-gate-3-end-of-month-14).
+
+**Pitfalls**
+- Claiming deliberation gains that come from a bigger compute budget, a different model, or different adapters.
+- Expecting high absolute GSM8K scores from a small model; the claim is the *relative*, compute-matched gain of the loop.
+- Letting tool output, web content or peer messages become instructions or training targets without filtering.
+
+### 3.4 Beyond Horizon 3 (unscheduled)
+
+Developmental Phase 5 (expertise), multi-model ecosystems, cross-architecture concept transfer, and spiking/STDP substrates are **unscheduled** until Gate 3 passes ([PLAN §1](PLAN.md#1-scope-in-one-paragraph)). They are re-planned then, in PLAN.md. Spiking/STDP work may continue as an off-critical-path research branch under [Appendix A](appendix-a-bio-inspired-neuron-research-branch.md); nothing in H1–H3 depends on it.
 
 ---
 
-#### Month 3: Proof of Concept - FIRST TRAINING
+## 4. Data Requirements
 
-**Now We Can Train!** The system exists, so we can feed it data.
+Sizes are approximate. Storage and compute budgets are in [PLAN §4](PLAN.md#4-budget-and-team). Verify each license against the source before use and record it next to the dataset checksum.
 
-**Training Data Needed:**
-```python
-# Dataset 1: Simple Moving Shapes (Self-Generated)
-def generate_training_data():
-    """
-    Generate 10,000 video frames of simple shapes moving
-    """
-    data = []
-    for i in range(10000):
-        # Create frame: black background, white square moving
-        frame = np.zeros((64, 64))
-        x_pos = (i % 64)
-        frame[30:34, x_pos:x_pos+4] = 1.0  # Moving square
-        
-        # Next frame (prediction target)
-        next_frame = np.zeros((64, 64))
-        next_x = ((i + 1) % 64)
-        next_frame[30:34, next_x:next_x+4] = 1.0
-        
-        data.append({
-            'current_frame': frame,
-            'next_frame': next_frame,
-            'motion_vector': [1, 0]  # Moving right
-        })
-    return data
+| Horizon | Dataset / environment | Approximate size | Role | License note |
+|---|---|---|---|---|
+| H1 | MNIST (Split-MNIST, 5 tasks) | 70k images, ~12 MB | Smoke test | No formal license; widely redistributed for research |
+| H1 | CIFAR-100 (Split-CIFAR-100, 10 tasks) | 60k images, ~170 MB | Gated benchmark | No formal license; free for research use |
+| H1 | CLIP ViT-B/32 image encoder | ~350 MB weights; cached features a few hundred MB | Track B frozen features | MIT (OpenAI CLIP); check the specific checkpoint if using OpenCLIP weights |
+| H2 | MiniGrid / BabyAI | Procedural; no download | Agent training and held-out compositions | Apache-2.0 (`minigrid` package) |
+| H2 | Agency environment with independent movers | Procedural; no download | Agency detection with counterfactual labels | Ours (Apache-2.0) |
+| H2 | BabyAI bot demonstrations (optional) | Generated locally; size set by the H2 spec | Imitation pretraining for agent and control alike | Generated from Apache-2.0 code |
+| H3 | SmolLM2-360M-Instruct or SmolLM2-1.7B-Instruct (pilot decides) | ~0.7 GB or ~3.4 GB (bf16) | Frozen language scaffold | Apache-2.0 |
+| H3 | GSM8K | ~7.5k train, ~1.3k test problems | Deliberation (program-aided) | MIT |
+| H3 | ARC-AGI-1 | 400 training + 400 public eval tasks | Tracked, not gated | Apache-2.0 |
+| H3 | ToMi / Hi-ToM-style generators | Generated; thousands of stories | Held-out ToM evaluation | Research releases; check each, some are non-commercial |
+| H3 | Domain-clone suite | Chosen in the H3 spec | Adapter specialization | Permissive sources only; record per source |
+| H3 | Sandbox red-team suite | Ours; hundreds of cases | Tool safety | Ours (Apache-2.0) |
 
-# No external dataset needed - we generate it!
-```
-
-**Training Loop:**
-```python
-# training/phase1_poc.py
-def train_phase1_poc():
-    """
-    First training: Teach E-Brain to predict next frame
-    """
-    ebrain = EBrainSystem(
-        vision_resolution=(64, 64),
-        initial_neurons=100,
-        enable_neurogenesis=True
-    )
-    
-    training_data = generate_training_data()
-    
-    for epoch in range(50):
-        for sample in training_data:
-            # 1. Feed current frame to vision system
-            spikes = ebrain.vision.encode_to_spikes(sample['current_frame'])
-            
-            # 2. E-Brain processes and predicts
-            prediction = ebrain.forward(spikes)
-            
-            # 3. Compare prediction to actual next frame
-            target = sample['next_frame']
-            prediction_error = mse(prediction, target)
-            
-            # 4. Compute reward
-            reward = -prediction_error  # Good prediction = high reward
-            if ebrain.novelty_detector.is_novel(sample['current_frame']):
-                reward += 0.5  # Bonus for new patterns
-            
-            # 5. Apply learning
-            ebrain.apply_stdp()  # Strengthen/weaken synapses
-            ebrain.update_neuron_growth(reward)  # Grow if learning
-            
-        # Evaluate every epoch
-        if epoch % 10 == 0:
-            eval_accuracy = evaluate_prediction(ebrain, test_data)
-            print(f"Epoch {epoch}: Accuracy {eval_accuracy:.2f}")
-    
-    # Save trained model
-    ebrain.save_checkpoint("checkpoints/phase1_poc.pt")
-```
-
-**Success Criteria:**
-- E-Brain predicts next frame position with >70% accuracy
-- Neurons grow from 100 → ~500 during training
-- Weak connections pruned (connection count decreases initially)
-- Novel patterns trigger higher rewards
-
-**Training Time:** 2-4 hours on GPU
-
-**Deliverable:** First trained E-Brain checkpoint that demonstrates basic learning.
+Not used: WikiText-103 or any corpus for training language from scratch; hand-written ToM items that are both trained and evaluated on; moving-square toy data as an exit criterion.
 
 ---
 
-### Stage 2: MVP Development (Month 4-6) - IMPLEMENTATION THEN TRAINING
+## 5. Roles and Skills
 
-#### Month 4: Implement Phase 1 Systems
+These are responsibilities, not headcount. Team size is in [PLAN §4](PLAN.md#4-budget-and-team). One person can hold several roles.
 
-**Coding Tasks (No Training):**
-```python
-# 1. Expand Vision System
-class AdvancedVisionSystem:
-    def __init__(self):
-        self.edge_detectors = []
-        self.corner_detectors = []
-        self.pattern_memory = {}
-    
-    def detect_edges(self, image):
-        """Code edge detection (Gabor filters)"""
-        pass
-    
-    def detect_corners(self, image):
-        """Code corner detection (Harris corners)"""
-        pass
-
-# 2. Implement Agency Detection
-class AgencyDetector:
-    def __init__(self):
-        self.action_history = []
-        self.outcome_history = []
-    
-    def record_action(self, action, outcome):
-        """Track: Did I cause this outcome?"""
-        pass
-    
-    def compute_agency(self):
-        """Correlation between my actions and outcomes"""
-        pass
-
-# 3. Implement Timing System
-class InternalTimingSystem:
-    def __init__(self):
-        self.millisecond_timer = MillisecondTimer(tick_rate=10)
-        self.interval_timer = IntervalTimer()
-    
-    def record_timestamp(self, event):
-        """Record when event occurred"""
-        pass
-
-# 4. Implement Sensory Grounding (Basic)
-class SensoryGroundingDatabase:
-    def __init__(self):
-        self.concept_groundings = {}
-    
-    def store_grounding(self, concept, visual_features):
-        """Store: 'ball' → round, red, texture"""
-        pass
-```
-
-**Testing:**
-```python
-def test_edge_detection():
-    vision = AdvancedVisionSystem()
-    # Test edge detector on vertical line
-    test_image = create_vertical_line_image()
-    edges = vision.detect_edges(test_image)
-    assert edges[32, :].sum() > 50  # Strong vertical edge detected
-
-def test_agency_detection():
-    agency = AgencyDetector()
-    # Test: Detect self-caused outcomes
-    agency.record_action(action="move_right", outcome="position_changed")
-    agency.record_action(action="stay", outcome="position_changed")  # External
-    
-    assert agency.compute_agency()["move_right"] > 0.8  # High agency
-    assert agency.compute_agency()["stay"] < 0.2  # Low agency
-```
-
-**Deliverable:** Extended E-Brain system with Phase 1 capabilities coded. **Not trained yet.**
+| Horizon | Role | Responsibilities | Skills |
+|---|---|---|---|
+| All | **Evaluation and infrastructure** | Harness, CI, experiment index, seeds and statistics, reproduction checks, gate reports | PyTorch, pytest, statistics (CIs, Welch tests), MLOps |
+| All | **Advisor / reviewer** | Reviews pre-registered protocols and gate reports; challenges novelty claims | Continual learning and RL research experience |
+| H1 | **Continual-learning engineer** | `GrowableNetwork`, growth controller, online EWC + replay, baselines | PyTorch internals (modules, optimizers, state dicts), CL literature |
+| H2 | **RL and environments engineer** | PPO with the E-Brain network as policy, vectorized rollouts, MiniGrid custom environments, counterfactual labeling | RL (PPO), gymnasium/minigrid, CPU/GPU throughput |
+| H2 | **Representation engineer** | Attribute detectors, role-filler binding, concept creation and drift policy | VSA/HRR or slot attention, representation learning |
+| H3 | **LM adaptation engineer** | SmolLM2 adapters (LoRA), deliberation loop and verifiers, adapter clones and merging | Hugging Face Transformers and PEFT, LM evaluation |
+| H3 | **Security and safety engineer** | TRK-17 sandbox and registry, audit log, red-team suite, alignment constraints | Container/microVM isolation (gVisor, Firecracker, nsjail), threat modeling |
 
 ---
 
-#### Month 5-6: Phase 1 Training (Infant Stage)
+## 6. What Not to Do
 
-**Training Data Needed:**
-
-```python
-# Dataset 1: MNIST (Handwritten Digits) - For Vision
-# Source: http://yann.lecun.com/exdb/mnist/
-# Size: 60,000 training images, 10,000 test images
-# Format: 28x28 grayscale images
-
-def prepare_mnist_data():
-    """
-    Prepare MNIST for E-Brain training
-    """
-    from torchvision import datasets, transforms
-    
-    mnist_train = datasets.MNIST(
-        root='./data',
-        train=True,
-        download=True,
-        transform=transforms.Compose([
-            transforms.Resize((64, 64)),  # Resize to E-Brain resolution
-            transforms.ToTensor(),
-            transforms.Normalize((0.5,), (0.5,))
-        ])
-    )
-    return mnist_train
-
-# Dataset 2: BabyAI (Simple Grid Navigation) - For Agency
-# Source: https://github.com/mila-iqia/babyai
-# Task: Navigate grid, pick up objects, follow simple commands
-
-def setup_babyai_environment():
-    """
-    Setup BabyAI for agency learning
-    """
-    import gym
-    import gym_minigrid
-    
-    env = gym.make('BabyAI-GoToObj-v0')
-    # E-Brain learns: "I moved right" → "Position changed"
-    return env
-
-# Dataset 3: Simple Audio (For Multimodal) - OPTIONAL for Month 6
-# Source: Speech Commands Dataset
-# Size: 65,000 one-second audio clips (yes, no, up, down, etc.)
-```
-
-**Training Curriculum:**
-
-```python
-# training/phase1_infant.py
-
-def train_phase1_infant():
-    """
-    Train E-Brain through infant stage (Phase 1)
-    """
-    ebrain = EBrainSystem.load_checkpoint("checkpoints/phase1_poc.pt")
-    
-    # Curriculum Part 1: Vision Learning (Week 1-2)
-    mnist_data = prepare_mnist_data()
-    
-    print("WEEK 1-2: Learning to recognize digits...")
-    for epoch in range(20):
-        for image, label in mnist_data:
-            # 1. Process image
-            spikes = ebrain.vision.encode_to_spikes(image)
-            
-            # 2. E-Brain predicts: "What is this?"
-            prediction = ebrain.forward(spikes)
-            
-            # 3. Reward based on recognition
-            correct = (prediction.argmax() == label)
-            reward = 1.0 if correct else 0.0
-            
-            # 4. Novelty bonus
-            if ebrain.novelty_detector.is_novel_digit(image):
-                reward += 0.5
-            
-            # 5. Apply learning
-            ebrain.learn(reward)
-        
-        # Evaluate edge/corner detection
-        eval_edges = evaluate_edge_detection(ebrain)
-        eval_corners = evaluate_corner_detection(ebrain)
-        print(f"Epoch {epoch}: Edges={eval_edges:.2f}, Corners={eval_corners:.2f}")
-    
-    # Curriculum Part 2: Agency Learning (Week 3-4)
-    babyai_env = setup_babyai_environment()
-    
-    print("WEEK 3-4: Learning 'I caused this'...")
-    for episode in range(1000):
-        state = babyai_env.reset()
-        done = False
-        
-        while not done:
-            # 1. E-Brain chooses action
-            action = ebrain.decide_action(state)
-            
-            # 2. Execute in environment
-            next_state, reward_ext, done, info = babyai_env.step(action)
-            
-            # 3. Agency detection
-            agency_score = ebrain.agency_detector.compute_agency()
-            
-            # 4. Intrinsic reward for agency discovery
-            reward = reward_ext + 0.5 * agency_score
-            
-            # 5. Learn
-            ebrain.learn(reward)
-            state = next_state
-    
-    # Curriculum Part 3: Sensory Grounding (Week 5-6)
-    print("WEEK 5-6: Grounding concepts to sensory features...")
-    
-    for concept, examples in concept_examples.items():
-        # concept = "circle", examples = [circle images]
-        for image in examples:
-            # Extract visual features
-            features = ebrain.vision.extract_features(image)
-            
-            # Ground concept
-            ebrain.sensory_grounding.store_grounding(
-                concept=concept,
-                visual_features=features
-            )
-    
-    # Phase 1 Complete!
-    ebrain.save_checkpoint("checkpoints/phase1_complete.pt")
-    
-    print("Phase 1 Training Complete!")
-    print(f"- Neurons: {ebrain.neuron_count}")
-    print(f"- Concepts grounded: {len(ebrain.sensory_grounding.concepts)}")
-    print(f"- MNIST accuracy: {evaluate_mnist(ebrain):.2%}")
-    print(f"- BabyAI success rate: {evaluate_babyai(ebrain):.2%}")
-```
-
-**Data Requirements Summary:**
-- **MNIST**: 60K images (included, no cost)
-- **BabyAI**: Synthetic environment (generated on-the-fly, no storage)
-- **Sensory grounding examples**: 100-500 curated images per concept (self-collected or ImageNet subset)
-
-**Training Time:** 
-- Vision: 10-20 hours (20 epochs × 60K images)
-- Agency: 5-10 hours (1000 episodes × ~100 steps)
-- Grounding: 1-2 hours (small dataset)
-- **Total: ~30-40 hours of training**
-
-**Hardware:** 1x GPU (RTX 3090 or better recommended)
-
-**Success Criteria:**
-- ✅ MNIST recognition >85% (edges, corners working)
-- ✅ BabyAI navigation >70% success rate
-- ✅ Agency detection >80% accuracy ("I caused this" vs external)
-- ✅ 50+ concepts grounded (circle, square, red, blue, etc.)
+- **Per-neuron Python objects or loops over neurons.** Use batched tensor operations. Spiking/STDP stays in Appendix A.
+- **Training language from scratch.** Language comes from the pretrained scaffold plus adapters.
+- **Wall-clock circadian schedules.** Consolidation is triggered by training signals, not by the time of day.
+- **Evaluating on training items.** Held-out templates, structures, compositions and task streams are fixed before training and never used for tuning.
+- **Tool code before governance.** Nothing executes untrusted code or calls external services until TRK-17 is approved.
+- **Unbounded training memory.** Everything the learner trains from counts toward a fixed byte budget ([PLAN §1](PLAN.md#operating-regime)).
+- **Deployment or learning from real users before Gate 3** and the TRK-17/TRK-23 safety review ([PLAN §5](PLAN.md#5-decisions-on-record), D-16).
+- Also: overriding `nn.Module` methods, using deprecated `gym`/`gym_minigrid` APIs, using a library default policy instead of the E-Brain network, and comparing against unmatched or untuned baselines.
 
 ---
 
-### Stage 3: Multi-Modal Integration (Month 7-10)
+## 7. Related Documents
 
-#### Month 7: Implement Language Systems
-
-**Coding Tasks:**
-```python
-# 1. Language Encoder
-class LanguageEncoder:
-    def __init__(self, vocab_size=10000):
-        self.vocabulary = {}
-        self.embeddings = None
-    
-    def tokenize(self, text):
-        """Convert text to tokens"""
-        pass
-    
-    def encode_to_spikes(self, tokens):
-        """Convert tokens to spike patterns"""
-        pass
-
-# 2. Concept Hierarchy (Level 2)
-class ConceptHierarchy:
-    def __init__(self):
-        self.level1_concepts = {}  # Parts
-        self.level2_concepts = {}  # Objects
-        self.relationships = {}
-    
-    def learn_object_from_parts(self, object_name, parts):
-        """'car' = wheels + body + windows"""
-        pass
-
-# 3. Theory of Mind System
-class TheoryOfMindSystem:
-    def __init__(self):
-        self.entity_beliefs = {}  # What does X know?
-        self.entity_goals = {}    # What does X want?
-    
-    def track_belief(self, entity, belief):
-        """Track what another entity knows"""
-        pass
-    
-    def infer_goal(self, entity, actions):
-        """Infer goal from observed actions"""
-        pass
-```
-
-**No training yet** - just implementing the infrastructure.
-
----
-
-#### Month 8-10: Phase 2-3 Training (Child Language Acquisition) — [Horizon 2]
-
-> [!TIP]
-> **Foundation-Scaffolded Strategy**:
-> Rather than training a language model from scratch on 100M tokens—which is insufficient to yield emergent reasoning or Theory of Mind—E-Brain utilizes a compact, open-weight foundation model (e.g., SmolLM-135M/360M or TinyLlama) as a frozen/adapter-tuned linguistic encoder. E-Brain's dynamic layers and concept graphs focus on **multimodal symbol grounding, agency attribution, and Theory of Mind reasoning**.
-
-**Training Data Needed:**
-
-```python
-# Dataset 1: Grounded Language & Dialog Corpus (Scaffolded Backbone)
-# Using lightweight open models (SmolLM-135M / TinyLlama) + curated child-directed dialogs
-def prepare_grounded_language_data():
-    """
-    Prepare language data for E-Brain symbol grounding
-    """
-    from datasets import load_dataset
-    
-    wikitext = load_dataset('wikitext', 'wikitext-103-v1')
-    
-    # Filter for simple sentences (child-appropriate)
-    simple_sentences = []
-    for text in wikitext['train']['text']:
-        if is_simple_sentence(text):
-            simple_sentences.append(text)
-    
-    return simple_sentences[:100000]  # 100K simple sentences
-
-# Dataset 2: COCO Captions (Vision-Language Grounding)
-# Source: https://cocodataset.org/
-# Size: 120K images with 5 captions each
-# Format: Image + text description
-
-def prepare_coco_data():
-    """
-    Link images to language descriptions
-    """
-    from pycocotools.coco import COCO
-    
-    coco = COCO('annotations/captions_train2017.json')
-    
-    vision_language_pairs = []
-    for img_id in coco.getImgIds():
-        # Get image
-        img = coco.loadImgs(img_id)[0]
-        
-        # Get captions
-        ann_ids = coco.getAnnIds(imgIds=img_id)
-        captions = [ann['caption'] for ann in coco.loadAnns(ann_ids)]
-        
-        vision_language_pairs.append({
-            'image': img,
-            'captions': captions
-        })
-    
-    return vision_language_pairs
-
-# Dataset 3: Sally-Anne Test (Theory of Mind)
-# Source: Hand-crafted scenarios
-# Size: 100 scenarios
-
-def create_theory_of_mind_scenarios():
-    """
-    Create scenarios to test Theory of Mind
-    """
-    scenarios = [
-        {
-            'setup': "Sally puts ball in basket. Sally leaves. Anne moves ball to box.",
-            'question': "Where will Sally look for the ball?",
-            'correct_answer': "basket",  # Sally's belief, not reality
-            'theory_of_mind_required': True
-        },
-        # ... 99 more scenarios
-    ]
-    return scenarios
-```
-
-**Training Curriculum:**
-
-```python
-# training/phase2_phase3.py
-
-def train_phase2_phase3():
-    """
-    Train language and social cognition
-    """
-    ebrain = EBrainSystem.load_checkpoint("checkpoints/phase1_complete.pt")
-    
-    # Enable Phase 2 systems
-    ebrain.enable_language_processing()
-    ebrain.enable_concurrent_thoughts(num_thoughts=2)
-    
-    # PHASE 2: Basic Language (Month 8)
-    print("PHASE 2: Learning language...")
-    
-    simple_sentences = prepare_wikitext_data()
-    
-    for epoch in range(30):
-        for sentence in simple_sentences:
-            # 1. Process sentence
-            tokens = ebrain.language.tokenize(sentence)
-            spikes = ebrain.language.encode_to_spikes(tokens)
-            
-            # 2. Predict next word
-            prediction = ebrain.forward(spikes)
-            
-            # 3. Reward for correct prediction
-            target = tokens[1:]  # Next word sequence
-            accuracy = compute_accuracy(prediction, target)
-            reward = accuracy
-            
-            # 4. Learn
-            ebrain.learn(reward)
-        
-        vocab_size = len(ebrain.language.vocabulary)
-        perplexity = evaluate_language_model(ebrain)
-        print(f"Epoch {epoch}: Vocab={vocab_size}, Perplexity={perplexity:.2f}")
-    
-    # PHASE 2.5: Vision-Language Grounding (Month 9)
-    print("PHASE 2.5: Linking vision to language...")
-    
-    coco_data = prepare_coco_data()
-    
-    for epoch in range(20):
-        for sample in coco_data:
-            # 1. Process image
-            visual_spikes = ebrain.vision.encode(sample['image'])
-            
-            # 2. Process caption
-            caption_spikes = ebrain.language.encode(sample['captions'][0])
-            
-            # 3. Concurrent thoughts!
-            thought1 = ebrain.concurrent_thoughts.create_thought(
-                task="understand_image",
-                input=visual_spikes
-            )
-            thought2 = ebrain.concurrent_thoughts.create_thought(
-                task="understand_caption",
-                input=caption_spikes
-            )
-            
-            # 4. Bind visual concepts to words
-            visual_concepts = thought1.extract_concepts()
-            word_concepts = thought2.extract_concepts()
-            
-            ebrain.concept_hierarchy.link_concepts(visual_concepts, word_concepts)
-            
-            # 5. Reward for successful grounding
-            grounding_accuracy = evaluate_grounding(ebrain, sample)
-            ebrain.learn(grounding_accuracy)
-    
-    # PHASE 3: Theory of Mind (Month 10)
-    print("PHASE 3: Learning Theory of Mind...")
-    
-    ebrain.enable_theory_of_mind()
-    ebrain.expand_concurrent_thoughts(num_thoughts=4)
-    
-    tom_scenarios = create_theory_of_mind_scenarios()
-    
-    for epoch in range(50):
-        for scenario in tom_scenarios:
-            # 1. Process scenario
-            setup_spikes = ebrain.language.encode(scenario['setup'])
-            question_spikes = ebrain.language.encode(scenario['question'])
-            
-            # 2. Track beliefs
-            ebrain.theory_of_mind.process_scenario(setup_spikes)
-            # Now E-Brain tracks: Sally believes ball is in basket
-            
-            # 3. Answer question
-            answer = ebrain.answer_question(question_spikes)
-            
-            # 4. Reward for correct Theory of Mind reasoning
-            correct = (answer == scenario['correct_answer'])
-            reward = 2.0 if correct else 0.0
-            
-            ebrain.learn(reward)
-    
-    ebrain.save_checkpoint("checkpoints/phase3_complete.pt")
-    
-    print("Phase 2-3 Complete!")
-    print(f"- Vocabulary: {len(ebrain.language.vocabulary)} words")
-    print(f"- Concurrent thoughts: {ebrain.concurrent_thoughts.capacity}")
-    print(f"- Theory of Mind accuracy: {evaluate_tom(ebrain):.2%}")
-```
-
-**Data Requirements:**
-- **WikiText-103**: 100M tokens (~500MB download)
-- **COCO Captions**: 120K images (~20GB download)
-- **Theory of Mind scenarios**: Self-generated (no download)
-
-**Training Time:**
-- Language: 40-60 hours (30 epochs × 100K sentences)
-- Vision-Language: 30-50 hours (20 epochs × 120K pairs)
-- Theory of Mind: 10-15 hours (50 epochs × 100 scenarios)
-- **Total: ~100-150 hours**
-
-**Hardware:** 2x GPU recommended for concurrent processing
-
----
-
-### Stage 4-5: Abstract Reasoning & Expertise (Month 11-20)
-
-#### Implementation Strategy
-
-**Month 11-12: Code Phase 4 Systems**
-```python
-# Implement without training:
-# - Abstract reasoning modules
-# - Circadian clock system
-# - 7-slot concurrent thought system
-# - Rich multimodal sensory grounding
-# - E-Brain-to-E-Brain communication
-```
-
-**Month 13-20: Training Phase 4-5**
-
-**Training Data Needed:**
-
-```python
-# Dataset 1: RAVEN's Progressive Matrices (Abstract Reasoning)
-# Source: https://github.com/WellyZhang/RAVEN
-# Size: 70K matrix problems
-# Task: Pattern completion (visual abstract reasoning)
-
-# Dataset 2: GSM8K (Math Word Problems)
-# Source: https://github.com/openai/grade-school-math
-# Size: 8K problems
-# Task: Multi-step math reasoning
-
-# Dataset 3: HotpotQA (Multi-Hop Reasoning)
-# Source: https://hotpotqa.github.io/
-# Size: 113K question-answer pairs
-# Task: Reasoning across multiple documents
-
-# Dataset 4: Expert Domain Data (Specialization)
-# Examples:
-# - arXiv papers (for research expertise)
-# - Stack Overflow (for programming expertise)
-# - Medical journals (for medical expertise)
-# - Legal documents (for legal expertise)
-
-def train_phase4_phase5():
-    """
-    Train abstract reasoning and expertise
-    """
-    ebrain = EBrainSystem.load_checkpoint("checkpoints/phase3_complete.pt")
-    
-    # Enable Phase 4 systems
-    ebrain.expand_concurrent_thoughts(num_thoughts=7)
-    ebrain.enable_circadian_clock()
-    ebrain.enable_rich_sensory_grounding()
-    
-    # Train on abstract reasoning
-    ravens = load_ravens_dataset()
-    gsm8k = load_gsm8k_dataset()
-    hotpotqa = load_hotpotqa_dataset()
-    
-    # Multi-month training loop
-    for month in range(8):  # Month 13-20
-        # Circadian cycle: Active learning during "day"
-        for day in range(30):
-            # Active period: 6am-10pm (16 hours)
-            for hour in range(16):
-                # Train on various tasks
-                train_on_ravens(ebrain, ravens, hours=1)
-                train_on_gsm8k(ebrain, gsm8k, hours=1)
-                train_on_hotpotqa(ebrain, hotpotqa, hours=1)
-            
-            # Sleep period: 10pm-6am (8 hours)
-            ebrain.enter_sleep_cycle(duration_hours=8)
-            # Consolidation happens during sleep
-        
-        # Specialization in chosen domain (Month 17+)
-        if month >= 4:
-            domain_data = load_domain_data(ebrain.chosen_domain)
-            train_on_domain(ebrain, domain_data, hours=100)
-    
-    ebrain.save_checkpoint("checkpoints/phase5_expert.pt")
-```
-
-**Training Time:**
-- Phase 4: ~300 hours (abstract reasoning, 3 months)
-- Phase 5: ~500 hours (expertise, 5 months)
-- **Total: ~800 hours** (~33 days of continuous training)
-
----
-
-## Data Requirements Summary
-
-### Datasets Overview
-
-| Dataset | Size | Purpose | Phase | Cost |
-|---------|------|---------|-------|------|
-| **Generated Shapes** | 10K frames | Proof of concept | POC | Free (generated) |
-| **MNIST** | 60K images | Vision learning | Phase 1 | Free |
-| **BabyAI** | Synthetic | Agency learning | Phase 1 | Free (generated) |
-| **Concept Examples** | 10K images | Sensory grounding | Phase 1 | Free (curated) |
-| **WikiText-103** | 100M tokens | Language learning | Phase 2 | Free |
-| **COCO Captions** | 120K images | Vision-language | Phase 2-3 | Free |
-| **Theory of Mind** | 100 scenarios | Social cognition | Phase 3 | Free (hand-crafted) |
-| **RAVEN** | 70K problems | Abstract reasoning | Phase 4 | Free |
-| **GSM8K** | 8K problems | Math reasoning | Phase 4 | Free |
-| **HotpotQA** | 113K pairs | Multi-hop reasoning | Phase 4 | Free |
-| **Domain Data** | Varies | Expertise | Phase 5 | Free (public archives) |
-
-**Total Cost: $0** - All datasets are publicly available!
-
-**Total Storage: ~50GB**
-
----
-
-## Development Team Structure
-
-### Recommended Team Roles
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  Role 1: Architecture Engineer                          │
-│  - Implements neural systems (neurons, STDP, growth)    │
-│  - Codes sensory systems (vision, language, etc.)       │
-│  - Builds core infrastructure                           │
-│  Skills: PyTorch, neuroscience, systems programming     │
-└─────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│  Role 2: Learning Systems Engineer                      │
-│  - Implements reward systems                            │
-│  - Codes learning algorithms (STDP, RL, etc.)           │
-│  - Designs training curricula                           │
-│  Skills: ML, reinforcement learning, optimization       │
-└─────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│  Role 3: Data & Training Engineer                       │
-│  - Prepares datasets                                    │
-│  - Runs training loops                                  │
-│  - Monitors training progress                           │
-│  Skills: Data engineering, MLOps, distributed training  │
-└─────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│  Role 4: Evaluation Engineer                            │
-│  - Designs evaluation metrics                           │
-│  - Runs developmental tests                             │
-│  - Validates milestones                                 │
-│  Skills: Testing, benchmarking, data analysis           │
-└─────────────────────────────────────────────────────────┘
-```
-
-**Minimum Team Size: 2-3 engineers** (roles can be combined)
-
----
-
-## Timeline Summary
-
-```
-Month 1-2:  IMPLEMENT core infrastructure           ⚙️ CODE
-Month 3:    TRAIN proof of concept                  🎓 TRAIN (2-4 hours)
-Month 4:    IMPLEMENT Phase 1 systems               ⚙️ CODE
-Month 5-6:  TRAIN Phase 1 (infant)                  🎓 TRAIN (~40 hours)
-Month 7:    IMPLEMENT language systems              ⚙️ CODE
-Month 8-10: TRAIN Phase 2-3 (child language)        🎓 TRAIN (~150 hours)
-Month 11-12: IMPLEMENT Phase 4 systems              ⚙️ CODE
-Month 13-16: TRAIN Phase 4 (abstract reasoning)     🎓 TRAIN (~300 hours)
-Month 17-20: TRAIN Phase 5 (expertise)              🎓 TRAIN (~500 hours)
-
-Total Development Time: 20 months
-Total Coding Time: 6 months
-Total Training Time: 14 months (~1000 GPU hours)
-```
-
----
-
-## Key Principles
-
-### 1. Implementation Before Training
-**You cannot train a system that doesn't exist.** Always code the infrastructure first, test it with unit tests, then begin training.
-
-### 2. Synthetic Data First
-Start with self-generated data (moving shapes, BabyAI environments) before using real-world datasets. This lets you validate the system without downloading large datasets.
-
-### 3. Incremental Complexity
-Don't train Phase 5 capabilities on day 1. Follow the developmental progression:
-- Phase 1: Infant (simple vision, agency)
-- Phase 2: Child (language basics)
-- Phase 3: Child (social cognition)
-- Phase 4: Adult (abstract reasoning)
-- Phase 5: Expert (specialization)
-
-### 4. Checkpoint Everything
-Save checkpoints after every phase. If training fails, you can resume from the last successful phase.
-
-### 5. Evaluation Metrics
-Define success criteria **before** training:
-- Phase 1: >85% MNIST accuracy
-- Phase 2: >1000 word vocabulary
-- Phase 3: >80% Theory of Mind accuracy
-- Phase 4: >70% RAVEN accuracy
-- Phase 5: Domain-specific benchmarks
-
----
-
-## Next Steps
-
-1. **Month 1**: Start coding `BioInspiredNeuron` class
-2. **Month 1**: Write unit tests for neuron behavior
-3. **Month 2**: Implement `NeurogenesisSystem` class
-4. **Month 2**: Implement `VisionInputSystem` class
-5. **Month 3**: Generate training data and run first training loop
-6. **Month 3**: Evaluate POC and iterate
-
-**The journey begins with code, not training data!** 🚀
+- [PLAN.md](PLAN.md): canonical schedule, gates, benchmarks, budget, team and terminology
+- [DECISIONS.md](DECISIONS.md): context and alternatives for each decision on record
+- [14-horizon-1-spec.md](14-horizon-1-spec.md): Horizon 1 protocol, growth mechanism and implementation constraints
+- [15-horizon-2-spec.md](15-horizon-2-spec.md), [16-horizon-3-spec.md](16-horizon-3-spec.md): Horizon 2 and 3 spec drafts
+- [13-design-review-2026-11.md](13-design-review-2026-11.md): the review behind this rewrite
+- [02-architecture.md](02-architecture.md): architecture, vectorized implementation rule, System 1 / System 2, foundation scaffold, component cards
+- [03-developmental-phases.md](03-developmental-phases.md): Developmental Phases 0–5
+- [Appendix A: bio-inspired neuron research branch](appendix-a-bio-inspired-neuron-research-branch.md): spiking/STDP, off the critical path

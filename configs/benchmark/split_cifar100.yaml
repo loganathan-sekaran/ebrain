@@ -1,0 +1,10 @@
+# Gated stream (spec §3.1)
+name: split_cifar100
+num_tasks: 10
+classes_per_task: 10
+train_images_per_task_min: 5000   # 500 per class, before the validation split
+epochs_per_task: 5
+batch_size: 32                    # current-task samples per step
+val_fraction: 0.1
+replay_buffer_size: 2000
+augmentation: crop_flip

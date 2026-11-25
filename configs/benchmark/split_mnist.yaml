@@ -1,0 +1,10 @@
+# Smoke-test stream (spec §3.1)
+name: split_mnist
+num_tasks: 5
+classes_per_task: 2
+train_images_per_task_min: 11263  # smallest possible digit pair (4, 5), before the validation split
+epochs_per_task: 1
+batch_size: 32
+val_fraction: 0.1
+replay_buffer_size: 500
+augmentation: none

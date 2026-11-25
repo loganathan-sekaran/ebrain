@@ -1,18 +1,14 @@
+# Horizon 1 Hydra config tree. Values follow docs/14-horizon-1-spec.md.
+# If they disagree, the spec (and docs/PLAN.md) wins. Each value lives in one place.
 defaults:
+  - model: reduced_resnet18
+  - growth: plateau_pressure
+  - cl_method: ewc_replay
+  - optimizer: sgd
+  - benchmark: split_cifar100
   - _self_
 
-training:
-  max_epochs: 100
-  batch_size: 32
-  learning_rate: 1e-4
-  seed: 42
-
-model:
-  name: "base_model"
-  input_dim: 784
-  hidden_dim: 128
-  output_dim: 10
-
-growth:
-  enabled: false
-  threshold: 0.0
+seed: 0                        # gate comparisons: seeds 0-9; other runs: 0-4; tuning stream: class-order seed 1000
+scenario: class_incremental    # class_incremental | task_incremental
+device: auto
+log_dir: logs/${now:%Y-%m-%d_%H-%M-%S}

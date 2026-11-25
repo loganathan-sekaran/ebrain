@@ -1,5 +1,7 @@
 # E-Brain Challenges and Solutions
 
+> **November 2026 note.** The Horizon 1 growth and EWC mechanics are specified in [14-horizon-1-spec.md §4](14-horizon-1-spec.md#4-growth-mechanism). Where the snippets here differ (identity init, width growth, router reinit, single-Fisher EWC, DDP), the spec wins. This register is missing safety, security and misuse risks; TRK-17 adds them. Costs and schedule are in [PLAN.md](PLAN.md).
+
 ## Overview
 
 This document catalogs anticipated challenges in building E-Brain and provides concrete mitigation strategies based on research and best practices.

@@ -14,11 +14,14 @@ Birth → Sensory → Motor → Language → Reasoning → Expertise
   ↓        ↓         ↓          ↓          ↓          ↓
 Minimal  Patterns  Actions   Symbols   Concepts   Mastery
 
-Strategic Horizons Alignment:
-├── Horizon 1 (Months 1–3): Core Differentiator Engine (Phases 0–1: Dynamic Growth & Anti-Forgetting)
-├── Horizon 2 (Months 4–8): Grounded Agency & Concept Hierarchy (Phases 2–3: Agency, Grounding, Concepts)
-└── Horizon 3 (Months 9–14+): Deliberative Reasoning & Transfer (Phases 4–5: Tools, Specialization, Cloning)
+Strategic Horizons Alignment (canonical mapping: PLAN.md §2):
+├── Horizon 1: Phase 0 substrate (growth + continual learning)
+├── Horizon 2: Phases 1–2 (sensory, sensorimotor/agency, concept levels 0–2)
+├── Horizon 3: Phases 3–4 (language via pretrained scaffold, deliberative reasoning, governed tools)
+└── Beyond H3: Phase 5 (expertise), unscheduled
 ```
+
+> **Phases are curriculum stages, not schedule units.** The "Duration" lines and per-phase success thresholds below are illustrative. No horizon uses fixed exit thresholds such as ">80%": H2 moves through levels with a learning-progress sampler, and tests the developmental order against shuffled and joint training ([15 §4](15-horizon-2-spec.md#4-curriculum)). Gates and months are defined only in [PLAN.md](PLAN.md). Each horizon spec decides which phase content it adopts. The Horizon 1 spec is [14-horizon-1-spec.md](14-horizon-1-spec.md).
 
 ---
 
@@ -968,6 +971,9 @@ attention_target = multi_agent.attention_manager.select_target(
 - E-Brain peer recognition and collaboration protocols
 - Role-based interactions (teacher, student, collaborator)
 - Trust and expertise tracking
+- Role understanding (teacher, learner, peer, observer)
+- Complex relationship tracking (who knows whom, who can help whom)
+- Strategic communication (when to share information)
 
 ### Concurrent Thought Development
 **Phase 4 Milestone: Full Working Memory (5-7 thoughts)**
@@ -1095,11 +1101,6 @@ thought = sensory_system.reason_with_imagery(
 ```
 
 **Why**: Multimodal integration enables robust understanding, sensory simulation enables safe planning (try mentally before physically), metaphorical grounding enables abstract reasoning.
-
-### Reward Structure
-- Role understanding (teacher, learner, peer, observer)
-- Complex relationship tracking (who knows whom, who can help whom)
-- Strategic communication (when to share information)
 
 ### Reward Structure
 **Primary Motivation**: Problem-solving + transfer + curiosity + human utility
@@ -1572,12 +1573,6 @@ creative_solution = sensory_system.multimodal_reasoning(
 
 **Why**: Expert mental imagery enables creative thinking, internal dialogue enables metacognition, advanced simulation enables complex planning, metaphorical grounding enables deep abstract reasoning - human-level cognitive capabilities.
 
-### Reward Structure
-        
-        if should_respond and my_turn(conversation_flow):
-            response = generate_response(grounded, participants)
-            speak(response)
-```
 
 **Social Cognition Development:**
 - Mature social identity with clear purpose ("help humans")
@@ -1741,7 +1736,7 @@ Exploration bonuses and curiosity
 ### Moving to Next Phase
 
 **Requirements:**
-1. ✅ Pass phase exit test (>80% threshold)
+1. ✅ Pass phase exit test (illustrative; superseded by the learning-progress sampler in [15 §4](15-horizon-2-spec.md#4-curriculum))
 2. ✅ Demonstrate core capabilities
 3. ✅ No catastrophic forgetting
 4. ✅ Architecture stable
@@ -1757,4 +1752,4 @@ Exploration bonuses and curiosity
 
 ---
 
-*Last Updated: November 3, 2025*
+*Last Updated: November 25, 2026*

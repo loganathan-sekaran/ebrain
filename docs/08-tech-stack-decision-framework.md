@@ -1,5 +1,7 @@
 # E-Brain Technology Stack Decision Framework
 
+> **November 2026 note (TRK-15).** [`pyproject.toml`](../pyproject.toml) is the single source of truth for dependencies and tooling: Python ≥3.12, Ruff, mypy, pytest, and the optional extras `h1`, `h2`, `tracking` and `dev`. `requirements.txt` has been removed. Horizon 1 uses a plain PyTorch loop, without Lightning or DDP ([14 §5](14-horizon-1-spec.md#5-implementation-constraints)). Where this document disagrees with that file or with [PLAN.md](PLAN.md), they win. That covers Python versions, black/flake8/pylint, CUDA pins, Lightning-based growth, `requirements.txt` workflows and cost figures.
+
 ## Overview
 
 This document outlines the comprehensive decision-making process for selecting E-Brain's technology stack, considering performance, scalability, collaboration, and long-term maintenance.
