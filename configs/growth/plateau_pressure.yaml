@@ -1,0 +1,16 @@
+# Primary growth trigger (spec §4.2). All timing is a fraction of the current task's optimizer steps.
+enabled: true
+trigger: plateau_pressure   # plateau_pressure | plateau_underfit | uncertainty | random_time | task_boundary | none
+check_every_frac: 0.05
+warmup_frac: 0.2            # checks run, no decisions
+cooldown_frac: 0.2
+plateau_window: 3           # checks
+plateau_delta: 0.01         # plateau iff 0 <= relative improvement < delta (rising loss is not a plateau)
+ema_smoothing: 0.5          # over successive checks, reset at every task boundary
+underfit_alpha: 0.95
+interference_rho: 0.10
+no_growth_first_task: true
+max_events_per_task: 2
+param_budget_multiplier: 2.0   # Gate 1 size cap (PLAN.md §3.1); enforced as params + unit <= cap
+new_group_lr_warmup_frac: 0.05
+random_time_draws: 3

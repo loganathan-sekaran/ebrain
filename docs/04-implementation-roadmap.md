@@ -2,33 +2,24 @@
 
 ## Overview
 
-This roadmap structures E-Brain development into the **Three Horizons Model**, moving progressively from a verified continual learning core to grounded concepts, and finally to scaffolded reasoning and multi-agent ecosystems:
+> **Schedule, gates, benchmarks, budget and team live in [PLAN.md](PLAN.md) only.** This roadmap lists the *work items* for each stage and maps stages to horizons. Stage headings deliberately carry no month numbers.
+>
+> Horizon 1 is specified in full in [14-horizon-1-spec.md](14-horizon-1-spec.md). That spec replaces the Stage 1 detail that used to live here.
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│ Horizon 1 (Months 1–3): Core Differentiator Engine                     │
-│ Dynamic Architecture Growth + Continual Learning (Zero Forgetting)     │
-│ Benchmark: Sequential Split-MNIST / Permuted-MNIST / Split-CIFAR100    │
-└──────────────────────────────────┬─────────────────────────────────────┘
-                                   │ Proven Growth & Retention
-                                   ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ Horizon 2 (Months 4–8): Grounded Agency & Concept Hierarchy            │
-│ Embodied Interaction + Concept Graph Formation (Part-Whole Compositions)│
-│ Benchmark: MiniGrid / BabyAI + Contrastive Concept Disentanglement    │
-└──────────────────────────────────┬─────────────────────────────────────┘
-                                   │ Grounded Concept Engine
-                                   ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ Horizon 3 (Months 9–14+): Cognitive Reasoning, Tools & Transfer        │
-│ Multi-Stage Deliberation + Tool-Use + Teacher-Student Cloning          │
-│ Benchmark: ARC (Abstraction & Reasoning Corpus) + Domain Specialization│
-└────────────────────────────────────────────────────────────────────────┘
-```
+| Stage | Horizon | Content |
+|---|---|---|
+| 0 | H1 (before Month 1) | Repo hygiene, CI, test skeleton (TRK-15) |
+| 1 | H1 | Growth + continual learning, Gate 1 |
+| 2 | H2 | Grounded perception, agency |
+| 3 | H2 | Concept graph, compositional generalization, Gate 2 |
+| 4 | H3 | Deliberation, governed tools |
+| 5 | H3 → Beyond | Adapter clones (H3, Gate 3). Expertise, ecosystem and concept transfer are unscheduled. |
+
+> **Note on Stages 2–5.** Their task lists predate the November 2026 review. Some items are out of scope for the gate they sit under until a horizon spec adopts them: Atari, speech, circadian/sleep, RAVEN, chess, the ecosystem hub. Stage 3's language, audio and unified-embedding items (3.1–3.3) belong to H3 under [PLAN.md §2](PLAN.md#developmental-phases-mapped-to-horizons), not H2. Each horizon spec, written before its horizon starts (TRK-19, TRK-17), decides what stays. Drafts exist for H2 ([15](15-horizon-2-spec.md)) and H3 ([16](16-horizon-3-spec.md)); where a stage item conflicts with them, the spec wins. Components are scheduled only through the cards in [02 §1](02-architecture.md#1-component-cards).
 
 ---
 
-## Stage 0: Project Setup (Week 1-2) — [Horizon 1]
+## Stage 0: Project Setup — [Horizon 1]
 
 ### Goals
 - Set up development environment
@@ -39,7 +30,7 @@ This roadmap structures E-Brain development into the **Three Horizons Model**, m
 
 #### Infrastructure
 - [ ] Set up Git repository with proper .gitignore
-- [ ] Create virtual environment (Python 3.10+)
+- [ ] Create virtual environment (Python 3.12+)
 - [ ] Install core dependencies (PyTorch, transformers, etc.)
 - [ ] Set up experiment tracking (Weights & Biases)
 - [ ] Configure GPU/cloud computing resources
@@ -63,10 +54,10 @@ ebrain/
 ```
 
 #### Development Tools
-- [ ] Set up code formatting (black, isort)
-- [ ] Configure linting (flake8, pylint)
+- [ ] Set up formatting and linting (Ruff)
+- [ ] Set up type checking (mypy)
 - [ ] Set up testing framework (pytest)
-- [ ] Create CI/CD pipeline (GitHub Actions)
+- [ ] Create CI pipeline (GitHub Actions) and pre-commit hooks
 - [ ] Set up documentation generation (Sphinx)
 
 ### Deliverables
@@ -75,80 +66,34 @@ ebrain/
 - ✅ README with setup instructions
 - ✅ First commit and main branch protection
 
-### Estimated Time
-2 weeks
+---
+
+## Stage 1: Growth + Continual Learning — [Horizon 1]
+
+Fully specified in [14-horizon-1-spec.md](14-horizon-1-spec.md):
+
+- hypothesis and novelty (§1);
+- tracks (§2);
+- protocol, metrics, baselines and ablations (§3);
+- growth mechanism (§4);
+- implementation constraints and required tests (§5);
+- compute (§6);
+- month-by-month plan (§7);
+- Gate 1 report template (§8).
+
+Gate 1 itself is defined in [PLAN.md §3.1](PLAN.md#31-gate-1-end-of-month-3).
+
+### Work items
+- [ ] CL harness: streams, metrics, JSONL logging, Hydra config
+- [ ] Baselines from [14 §3.3](14-horizon-1-spec.md#33-baselines), reproduced against published numbers. The pre-allocated and width-matched static controls come after the grown runs.
+- [ ] `GrowableNetwork.grow()` with function-preserving residual blocks. Never override `nn.Module.add_module`.
+- [ ] `GrowthController` (plateau ∧ (underfit ∨ interference), warm-up, cooldown, cap) as a pure, unit-tested function
+- [ ] Optimizer param-group handling on growth; online EWC that tolerates new parameters
+- [ ] Full sweep and ablations (random-time and boundary growth), seeds per [PLAN.md §3](PLAN.md#decision-rule-all-gates), Gate 1 report
 
 ---
 
-## Stage 1: Proof of Concept - Dynamic Growth Mechanism (Month 1-3) — [Horizon 1: Core Differentiator Engine]
-
-### Goals
-- Validate core innovation: dynamic architecture growth in vectorized PyTorch
-- Demonstrate continual learning without catastrophic forgetting (<5% backward forgetting)
-- Establish baseline performance metrics on sequential benchmarks
-
-### Tasks
-
-#### 1.1 Implement Base Architecture (Week 3-4)
-- [ ] Create modular neural network base class (`GrowableNetwork`)
-- [ ] Implement modular expandable blocks (adapters / residual heads / MoE)
-- [ ] Add module registry and dynamic routing
-- [ ] Build forward pass with vectorized tensor routing
-
-```python
-# Target implementation
-class GrowableNetwork(nn.Module):
-    def __init__(self, base_dim: int):
-        super().__init__()
-        self.modules_list = nn.ModuleList()
-        self.module_registry = {}
-        self.router = DynamicRouter()
-    
-    def add_module(self, module_type: str, spec: dict):
-        # Dynamically inject new module/adapter
-        pass
-    
-    def forward(self, x: torch.Tensor):
-        # Route through active modules on GPU
-        pass
-```
-
-#### 1.2 Implement Growth Controller (Week 5)
-- [ ] Define growth triggers (validation loss plateau, capacity saturation, Bayesian/dropout uncertainty)
-- [ ] Implement capacity monitoring
-- [ ] Create module addition logic
-- [ ] Add weight initialization strategies (warm start / identity initialization)
-
-#### 1.3 Implement Continual Learning (Week 6)
-- [ ] Elastic Weight Consolidation (EWC) with Fisher Information Matrix
-- [ ] Experience Replay buffer
-- [ ] A-GEM (Averaged Gradient Episodic Memory)
-- [ ] Evaluation metrics for backward forgetting and forward transfer
-
-#### 1.4 Proof of Concept Experiments (Week 7-8)
-- [ ] Experiment 1: Sequential Split-MNIST → Split-FashionMNIST → Split-CIFAR10
-- [ ] Experiment 2: Compare dynamic growth vs. static fixed-size baseline
-- [ ] Experiment 3: Measure catastrophic forgetting (<5% target)
-- [ ] Document results and learnings
-
-### Success Criteria
-- ✅ Network successfully allocates modules when uncertainty spikes
-- ✅ <5% forgetting on previous tasks after learning subsequent ones
-- ✅ Outperforms fixed-size baseline by >15% on continual learning retention
-- ✅ Growth triggers activate reliably without runaway parameter explosion
-
-### Deliverables
-- Working `GrowableNetwork` & `GrowthController` in `src/ebrain/core/`
-- Continual learning benchmark harness & test suite
-- Experimental results report
-- Conference paper draft (optional)
-
-### Estimated Time
-6-8 weeks
-
----
-
-## Stage 2: MVP - Grounded Perception & Agency (Month 4-6) — [Horizon 2: Grounded Agency]
+## Stage 2: MVP - Grounded Perception & Agency — [Horizon 2: Grounded Agency]
 
 ### Goals
 - Build complete pipeline for one modality (vision)
@@ -157,13 +102,13 @@ class GrowableNetwork(nn.Module):
 
 ### Tasks
 
-#### 2.1 Complete Vision Pipeline (Month 3)
+#### 2.1 Complete Vision Pipeline
 - [ ] Implement vision encoder (CNN + ViT)
 - [ ] Add data augmentation pipeline
 - [ ] Create vision-specific evaluation suite
 - [ ] Integrate with growth mechanism
 
-#### 2.2 Add Memory Systems (Month 3)
+#### 2.2 Add Memory Systems
 - [ ] Implement working memory (attention-based)
 - [ ] Build long-term memory (vector database)
 - [ ] Add episodic buffer for experience replay
@@ -181,7 +126,7 @@ class GrowableNetwork(nn.Module):
   - [ ] Create persistent identity_vector (512-dim)
   - [ ] Setup autobiographical memory storage
 
-#### 2.3 Build Meta-Learning Components (Month 4)
+#### 2.3 Build Meta-Learning Components
 - [ ] Performance monitoring system
 - [ ] Uncertainty estimation (MC Dropout, ensembles)
 - [ ] Automated evaluation pipeline
@@ -192,7 +137,7 @@ class GrowableNetwork(nn.Module):
   - [ ] Phase 1 reward weighting (accuracy + novelty)
   - [ ] Reward logging and visualization
 
-#### 2.4 Implement Phase 1 Curriculum (Month 4)
+#### 2.4 Implement Phase 1 Curriculum
 - [ ] Collect/prepare datasets (MNIST, CIFAR, simple objects)
 - [ ] Create curriculum scheduler
 - [ ] Implement difficulty progression
@@ -223,7 +168,7 @@ class GrowableNetwork(nn.Module):
   - [ ] Store concept groundings (basic)
   - [ ] No imagery generation yet, just association learning
 
-#### 2.5 Add Action Generation (Month 5)
+#### 2.5 Add Action Generation
 - [ ] Simple decision-making module
 - [ ] Policy network for grid world
 - [ ] Integration with RL environments (Gym)
@@ -234,7 +179,7 @@ class GrowableNetwork(nn.Module):
   - [ ] Task success + exploration + diversity weighting
   - [ ] State visit tracking for exploration bonus
 
-#### 2.6 Phase 2 Development (Month 5)
+#### 2.6 Phase 2 Development
 - [ ] BabyAI environment integration
 - [ ] Simple Atari games (Pong, Breakout)
 - [ ] Multi-step planning module
@@ -252,7 +197,7 @@ class GrowableNetwork(nn.Module):
 - [ ] Multi-step planning module
 - [ ] Strategy formation tracking
 
-#### 2.7 Testing & Refinement (Month 6)
+#### 2.7 Testing & Refinement
 - [ ] Comprehensive unit tests
 - [ ] Integration tests
 - [ ] Performance optimization
@@ -283,12 +228,9 @@ class GrowableNetwork(nn.Module):
 - Evaluation report with metrics
 - Technical documentation
 
-### Estimated Time
-4 months
-
 ---
 
-## Stage 3: Multi-Modal Integration & Concept Graphs (Month 7-9) — [Horizon 2: Concept Hierarchy]
+## Stage 3: Multi-Modal Integration & Concept Graphs — [Horizon 2: Concept Hierarchy]
 
 ### Goals
 - Add scaffolded language and audio perception
@@ -297,7 +239,7 @@ class GrowableNetwork(nn.Module):
 
 ### Tasks
 
-#### 3.1 Scaffolded Language Processing (Month 7)
+#### 3.1 Scaffolded Language Processing
 - [ ] Integrate lightweight pre-trained language backbone (e.g. SmolLM-135M / TinyLlama) as linguistic encoder
 - [ ] Tokenizer & embedding projection layers to E-Brain unified space
 - [ ] Language decoding head for generation
@@ -309,19 +251,19 @@ class GrowableNetwork(nn.Module):
   - [ ] Test grounding with common objects (cup, ball, etc.)
   - [ ] No mental imagery yet, just feature association
 
-#### 3.2 Add Audio Processing (Month 7)
+#### 3.2 Add Audio Processing
 - [ ] Audio encoder (spectrogram + transformer)
 - [ ] Speech recognition pipeline
 - [ ] Audio-visual sync detection
 - [ ] Audio evaluation metrics
 
-#### 3.3 Unified Embedding Space (Month 8)
+#### 3.3 Unified Embedding Space
 - [ ] Cross-modal projection heads
 - [ ] Contrastive learning for alignment
 - [ ] Multi-modal fusion layers
 - [ ] Cross-modal attention mechanisms
 
-#### 3.4 Phase 3 Implementation (Month 8-9)
+#### 3.4 Phase 3 Implementation
 - [ ] BabyAI language grounding
 - [ ] Word-object association tasks
 - [ ] Grammar induction experiments
@@ -342,7 +284,7 @@ class GrowableNetwork(nn.Module):
   - [ ] Register humans as separate entities
   - [ ] Track current addressee in conversation
 
-#### 3.5 Multi-Modal Curriculum (Month 9)
+#### 3.5 Multi-Modal Curriculum
 - [ ] Vision + language tasks
 - [ ] Audio + language tasks
 - [ ] Vision + audio + language integration
@@ -355,7 +297,7 @@ class GrowableNetwork(nn.Module):
   - [ ] Learn from human corrections
   - [ ] Symbol grounding accuracy rewards
 
-#### 3.6 Symbol Grounding (Month 10)
+#### 3.6 Symbol Grounding
 - [ ] Word-to-concept mapping
 - [ ] Compositional understanding (adjective + noun)
 - [ ] Instruction following
@@ -406,12 +348,9 @@ class GrowableNetwork(nn.Module):
 - Cross-modal evaluation suite
 - Multi-modal learning paper
 
-### Estimated Time
-4 months
-
 ---
 
-## Stage 4: Deliberative Reasoning & Tool Use (Month 10-13) — [Horizon 3: Reasoning & Tools]
+## Stage 4: Deliberative Reasoning & Tool Use — [Horizon 3: Reasoning & Tools]
 
 ### Goals
 - Implement Phase 4 capabilities (deliberative multi-stage reasoning & tool orchestration)
@@ -420,7 +359,7 @@ class GrowableNetwork(nn.Module):
 
 ### Tasks
 
-#### 4.1 Reasoning Module (Month 11)
+#### 4.1 Reasoning Module
 - [ ] Enhanced transformer for reasoning
 - [ ] **Multi-stage reasoning system implementation**
   - [ ] StageProcessor with progressive depth
@@ -431,7 +370,7 @@ class GrowableNetwork(nn.Module):
 - [ ] Logical inference engine
 - [ ] Causal reasoning components
 
-#### 4.2 Concept Learning (Month 11-12)
+#### 4.2 Concept Learning
 - [ ] **Advanced hierarchical concept system**
   - [ ] Level-3 concepts: Categories and abstract groupings
   - [ ] Multiple composition types (and/or/sequence/spatial/functional)
@@ -457,7 +396,7 @@ class GrowableNetwork(nn.Module):
   - [ ] Attention allocation in multi-entity scenes
   - [ ] Relationship graph maintenance
 
-#### 4.3 Phase 4 Curriculum (Month 12)
+#### 4.3 Phase 4 Curriculum
 - [ ] RAVEN's matrices (with multi-stage reasoning)
 - [ ] CLEVR reasoning (decomposition mode)
 - [ ] bAbI tasks (chain-of-thought mode)
@@ -468,7 +407,7 @@ class GrowableNetwork(nn.Module):
   - [ ] Action prediction based on mental models
   - [ ] Strategic communication decisions
 
-#### 4.4 Transfer Learning (Month 13)
+#### 4.4 Transfer Learning
 - [ ] Few-shot learning meta-module
 - [ ] Cross-domain transfer experiments
 - [ ] Knowledge distillation
@@ -499,7 +438,7 @@ class GrowableNetwork(nn.Module):
   - [ ] Abstract concepts via sensory metaphor
   - [ ] Test: multimodal problem solving (e.g., "safely pour hot water")
 
-#### 4.5 Meta-Cognition (Month 13-14)
+#### 4.5 Meta-Cognition
 - [ ] Confidence calibration
 - [ ] Explanation generation
 - [ ] Knowledge gap identification
@@ -518,12 +457,9 @@ class GrowableNetwork(nn.Module):
 - Meta-cognitive evaluation suite
 - Research paper on developmental AI
 
-### Estimated Time
-4 months
-
 ---
 
-## Stage 5: Expertise, Model Cloning & Knowledge Transfer (Month 14+) — [Horizon 3: Transfer & Ecosystem]
+## Stage 5: Expertise, Model Cloning & Knowledge Transfer — [Horizon 3: Transfer & Ecosystem]
 
 ### Goals
 - Implement Phase 5 capabilities (domain specialization and self-curriculum)
@@ -532,25 +468,25 @@ class GrowableNetwork(nn.Module):
 
 ### Tasks
 
-#### 5.1 Domain Specialization (Month 15-18)
+#### 5.1 Domain Specialization
 - [ ] Choose 2-3 target domains (e.g., chess, coding, Q&A)
 - [ ] Implement domain-specific modules
 - [ ] Deep training in each domain
 - [ ] Competition-level evaluation
 
-#### 5.2 Mixture of Experts (Month 15-16)
+#### 5.2 Mixture of Experts
 - [ ] MoE architecture integration
 - [ ] Expert routing mechanisms
 - [ ] Load balancing
 - [ ] Expert specialization tracking
 
-#### 5.3 Self-Curriculum Generation (Month 17)
+#### 5.3 Self-Curriculum Generation
 - [ ] Automated difficulty assessment
 - [ ] Task generation for weak areas
 - [ ] Exploration strategies
 - [ ] Intrinsic motivation mechanisms
 
-#### 5.4 Teaching Capability (Month 18)
+#### 5.4 Teaching Capability
 - [ ] Explanation generation refinement
 - [ ] Pedagogical strategies
 - [ ] Student modeling
@@ -591,25 +527,25 @@ class GrowableNetwork(nn.Module):
   - [ ] Purpose and values representation
   - [ ] Long-term relationship maintenance
 
-#### 5.5 Creative Problem Solving (Month 18+)
+#### 5.5 Creative Problem Solving
 - [ ] Novel solution generation
 - [ ] Cross-domain knowledge combination
 - [ ] Creative exploration mechanisms
 - [ ] Evaluation of creativity
 
-#### 5.6 Model Cloning Infrastructure (Month 19)
+#### 5.6 Model Cloning Infrastructure
 - [ ] Implement model cloning system
 - [ ] Create full clone, partial clone, and adapter-based strategies
 - [ ] Build domain-specific initialization framework
 - [ ] Test cloning with first domain (e.g., chess or coding)
 
-#### 5.7 Knowledge Transfer Protocol (Month 20-21)
+#### 5.7 Knowledge Transfer Protocol
 - [ ] Implement concept extraction from teacher models
 - [ ] Build knowledge package format (embeddings, reasoning patterns, examples)
 - [ ] Create transfer protocol (alignment, integration, verification)
 - [ ] Test teacher-student transfer on simple concepts
 
-#### 5.8 Multi-Model Ecosystem (Month 22+)
+#### 5.8 Multi-Model Ecosystem
 - [ ] Build shared knowledge hub
 - [ ] Enable concept contribution and retrieval
 - [ ] Implement curriculum builder for multi-concept transfer
@@ -632,9 +568,6 @@ class GrowableNetwork(nn.Module):
 - Model cloning and transfer system
 - Knowledge hub infrastructure
 - Final research publication
-
-### Estimated Time
-6+ months (ongoing)
 
 ---
 
@@ -667,33 +600,6 @@ class GrowableNetwork(nn.Module):
 
 ---
 
-## Milestones & Checkpoints
-
-### Major Milestones
-
-| Milestone | Target Date | Success Criteria |
-|-----------|------------|------------------|
-| Proof of Concept | Month 2 | Growth mechanism validated |
-| MVP Complete | Month 6 | Phase 1-2 complete, single modality |
-| Multi-Modal | Month 10 | Phase 3 complete, language capable |
-| Reasoning | Month 14 | Phase 4 complete, transfer learning |
-| Expertise | Month 20 | Phase 5, expert-level performance |
-| Model Cloning | Month 21 | Successful domain-specific cloning |
-| Knowledge Transfer | Month 22 | Teacher-student concept transfer working |
-| Ecosystem | Month 24 | Knowledge hub with multiple models |
-
-### Quarterly Reviews
-
-**Q1 (Month 3):** Growth mechanism + base architecture  
-**Q2 (Month 6):** Single modality MVP  
-**Q3 (Month 9):** Multi-modal integration  
-**Q4 (Month 12):** Abstract reasoning  
-**Q5 (Month 15-18):** Expertise and specialization  
-**Q6 (Month 19-22):** Model cloning and knowledge transfer  
-**Q7+ (Month 23+):** Ecosystem expansion and deployment
-
----
-
 ## Risk Management
 
 ### High-Risk Items & Mitigation
@@ -710,100 +616,23 @@ class GrowableNetwork(nn.Module):
 
 ---
 
-## Resource Requirements
+## Resources, Success Metrics and Gates
 
-### Computing Resources
+Compute, storage, team, gate criteria and adaptation triggers are defined only in [PLAN.md](PLAN.md):
 
-| Stage | GPU Needs | Storage | Estimated Cost |
-|-------|-----------|---------|----------------|
-| Stage 1 | 1-2 GPUs | 100 GB | $500-1000 |
-| Stage 2 | 2-4 GPUs | 500 GB | $2000-4000 |
-| Stage 3 | 4-8 GPUs | 1 TB | $5000-10000 |
-| Stage 4-5 | 8+ GPUs | 2+ TB | $10000+ |
+- §3: horizons, gates and benchmarks;
+- §4: budget and team;
+- §6: adaptation triggers.
 
-**Recommendation:** Use cloud computing (AWS, GCP, Azure) with spot instances for cost efficiency.
-
-### Human Resources
-
-**Minimum Team:**
-- 1 ML Engineer/Researcher (full-time)
-- Access to GPU resources
-- Advisor/mentor (part-time)
-
-**Ideal Team:**
-- 2-3 ML Engineers
-- 1 Research Scientist
-- 1 Software Engineer (infrastructure)
-- Cognitive science advisor (consulting)
-
-### Data Requirements
-
-- Vision: ImageNet, COCO, CIFAR, MNIST
-- Language: Wikipedia, books corpus, dialogue datasets
-- Audio: LibriSpeech, Common Voice
-- Games: Atari, BabyAI, chess databases
-- Reasoning: RAVEN, CLEVR, bAbI, ARC
-
-**Estimated Total:** 500 GB - 2 TB
-
----
-
-## Success Metrics
-
-### Technical Metrics
-- Continual learning: <10% backward transfer (forgetting)
-- Forward transfer: >20% improvement on new tasks
-- Growth efficiency: <5% overhead from growth mechanism
-- Sample efficiency: 10x better than baseline on transfer tasks
-
-### Developmental Metrics
-- Phase 1: >85% on sensory tasks
-- Phase 2: Solve BabyAI optimally
-- Phase 3: 1000+ word vocabulary, >80% QA accuracy
-- Phase 4: >70% on reasoning benchmarks
-- Phase 5: Top 10% on expert domains
-
-### System Metrics
-- Training stability: No crashes in 24hr training runs
-- Inference speed: <100ms per decision
-- Memory efficiency: <16GB for inference
-- Scalability: Handle 50+ learned tasks
-
----
-
-## Decision Points
-
-### Go/No-Go Gates (Aligned with Three Horizons)
-
-**Gate 1: Horizon 1 Review (End of Stage 1, Month 3):**
-- **Go if:** Dynamic growth network demonstrates <5% backward forgetting on Task 1 after training Task 3 on sequential benchmarks (Split-MNIST / Split-CIFAR), outperforming fixed-capacity baselines by >15%.
-- **No-Go if:** Catastrophic forgetting exceeds 10%, growth triggers produce runaway parameter explosion, or dynamic routing fails.
-
-**Gate 2: Horizon 2 Review (End of Stage 3, Month 9):**
-- **Go if:** Grounded agency is verified (correlation between self-action and sensory outcome >80%), compositional concept generalization in BabyAI exceeds 80%, and cross-modal alignment with scaffolded linguistic backbones converges.
-- **No-Go if:** Agent fails to distinguish self-caused from environmental events or cannot generalize to unseen compositions of atomic concepts.
-
-**Gate 3: Horizon 3 Review (End of Stage 5, Month 14+):**
-- **Go if:** Multi-stage deliberative reasoning verifies solutions, sandboxed tool execution executes accurately, and cloned models successfully transfer concept packages with >80% retention.
-- **No-Go if:** Deliberation fails to outperform single-pass inference, or student models fail to absorb transferred concept graphs.
-
-### Adaptation Triggers
-
-- If growth mechanism underperforms: Explore alternative approaches (NAS, MoE)
-- If continual learning fails: Research latest CL techniques, ensemble methods
-- If computational costs too high: Reduce scope, optimize architecture
-- If phases take too long: Simplify curriculum, focus on core capabilities
+Metric definitions (ACC, BWT, FWT, forgetting) are in [14-horizon-1-spec.md §3.2](14-horizon-1-spec.md#32-metrics).
 
 ---
 
 ## Next Steps
 
-1. **Immediate (Week 1-2):** Complete Stage 0 (project setup)
-2. **Short-term (Month 1-2):** Stage 1 (proof of concept)
-3. **Medium-term (Month 3-6):** Stage 2 (MVP)
-4. **Long-term (Month 7+):** Stages 3-5 (full system)
+See [PLAN.md §7](PLAN.md#7-next-steps).
 
 ---
 
-*Roadmap Version: 1.0*  
-*Last Updated: October 31, 2025*
+*Roadmap Version: 2.0*  
+*Last Updated: November 25, 2026*

@@ -1,0 +1,12 @@
+# Online EWC + reservoir replay (spec §3.1, §4.4)
+name: ewc_replay
+ewc:
+  enabled: true
+  lambda: 100.0        # placeholder; tuned within {10, 100, 1000} on the tuning stream (spec §3.5)
+  gamma: 1.0           # tuned within {0.9, 1.0}
+  fisher_samples: 1000
+replay:
+  enabled: true
+  buffer_size: ${benchmark.replay_buffer_size}   # single source: the benchmark config
+  batch_size: ${benchmark.batch_size}            # replay samples per step, from task 2 on
+  sampling: reservoir                            # each sample offered once, on first presentation

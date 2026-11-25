@@ -1,0 +1,6 @@
+# Shared by every method (spec §3.1, §3.5)
+name: sgd
+lr: 0.03             # placeholder; tuned within {0.01, 0.03, 0.1}
+momentum: 0.9
+weight_decay: 0.0    # tuned within {0, 5e-4}
+schedule: constant_per_task   # no scheduler, so parameter groups added by growth need no re-binding

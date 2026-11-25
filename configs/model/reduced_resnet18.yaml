@@ -1,0 +1,10 @@
+# Track A backbone (spec §2): reduced ResNet-18, stage widths nf * (1, 2, 4, 8), ~1.09M parameters
+name: reduced_resnet18
+nf: 20
+stage4_width: null          # null = nf * 8; the width-matched control widens stage 4 only (spec §3.3)
+head_dropout: 0.1           # present in every method, so MC dropout is available (spec §2)
+growth_unit:
+  type: basic_block         # residual BasicBlock appended to the end of a stage (spec §4.1)
+  zero_init_last_bn: true   # last BN gamma/beta = 0, so insertion is exactly function-preserving
+  max_blocks_per_stage: 2
+preallocated_blocks: [0, 0, 0, 0]   # pre-allocated control: blocks per stage present from task 1

@@ -1,9 +1,9 @@
 # E-Brain: Developmental AI with Dynamic Growth
 
 [![Status](https://img.shields.io/badge/status-planning-blue)]()
-[![Python](https://img.shields.io/badge/python-3.10+-blue)]()
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c)]()
-[![License](https://img.shields.io/badge/license-TBD-lightgrey)]()
+[![Python](https://img.shields.io/badge/python-3.12+-blue)]()
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.4+-ee4c2c)]()
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)]()
 
 > A developmental artificial intelligence system that grows and learns like a human brain, starting from minimal capabilities and progressing through structured phases to achieve expert-level performance across multiple domains.
 
@@ -21,6 +21,8 @@ E-Brain is an ambitious research project to create an AI system that:
 - **Forms Ecosystems**: Builds collaborative networks of specialized AI models
 
 ## 🎯 Key Innovations
+
+> **Vision vs. plan.** The sections below describe the long-term vision. What is actually scheduled is the three horizons in [docs/PLAN.md](docs/PLAN.md): growth + continual learning, then grounded concepts + agency, then deliberation, governed tools and adapter clones. Everything else here is unscheduled until Gate 3. Where a section below conflicts with PLAN.md's decisions on record, PLAN.md wins.
 
 ### 1. Dynamic Architecture Growth
 Unlike fixed neural networks, E-Brain grows new modules and layers when needed, similar to how the brain forms new neural connections.
@@ -56,14 +58,12 @@ Concepts compose through multiple rules: AND (all features), OR (alternatives), 
 - 💭 Abstract reasoning and creativity
 
 **Machine-Like Advantages** (What we can do):
-- ⚡ **Unlimited working memory** (1000+ items vs human 7±2)
-- 🧠 **Perfect recall** (never forget, exact retrieval)
-- 🔄 **Massive parallelization** (1000+ thoughts simultaneously)
-- ⏱️ **Microsecond reactions** (<1ms vs human ~200ms)
-- 🎯 **Infinite attention** (no fatigue, 24/7 focus)
-- 🛠️ **Full tool access** (subprocess, APIs, code execution, data processing)
+- ⚡ **Large-scale retrieval** (System 1): associative memory bounded by storage, not by a 7±2 limit
+- 🔄 **Parallel search** (System 1): batched rollouts and hypothesis evaluation on GPU
+- 🎯 **Bounded deliberation** (System 2): a small, configurable number of active goals that keeps reasoning focused
+- 🛠️ **Governed tool use**: read-only tools are open; side-effecting tools run only through a sandbox with approval gates and an audit log
 
-**Result**: An AI that understands like a human but computes with superhuman capabilities and leverages all available system resources to solve problems.
+**Result**: An AI that learns the way humans do, uses machine-scale memory and search, and acts in the world only through governed, auditable tools. See [docs/02-architecture.md §0.2](docs/02-architecture.md#02-dual-process-cognitive-architecture-system-1-vs-system-2).
 
 ### 5. Continual Learning
 Prevents catastrophic forgetting through multiple strategies (EWC, A-GEM, Experience Replay, Progressive Networks).
@@ -90,9 +90,9 @@ E-Brain's learning evolves from external rewards to intrinsic motivation, mimick
 - **Phase 2 (Toddler)**: Exploration + task success + competence growth
 - **Phase 3 (Child)**: Communication success + human feedback (praise/criticism)
 - **Phase 4 (Student)**: Problem-solving + transfer learning + mastery
-- **Phase 5 (Adult)**: **Human utility** (primary) + alignment + continuous improvement
+- **Phase 5 (Adult)**: Human utility + continuous improvement, always *within* alignment constraints
 
-**No emotions required**—pure information-theoretic rewards (curiosity = uncertainty reduction) and utility-based goals (helping humans). As E-Brain matures, dependency on external rewards decreases while intrinsic motivation (curiosity, mastery, purpose) dominates.
+**No emotions required**—pure information-theoretic rewards (curiosity = uncertainty reduction) and utility-based goals (helping humans). As E-Brain matures, intrinsic motivation (curiosity, mastery) takes a larger share of the reward, but two things never change. Alignment is a hard constraint that fails closed, not a reward term to trade off. Human corrections keep full weight at every stage ([docs/13 §6.2](docs/13-design-review-2026-11.md#62-reward-design-0241034521)).
 
 ### 10. Self-Identity & Social Cognition
 E-Brain develops a sense of "I" (self), "You" (others), and "They" (third parties) through embodied experience:
@@ -118,8 +118,8 @@ Enables **human-like social intelligence** without requiring emotions—pure inf
 E-Brain processes multiple "thoughts" simultaneously, mimicking the brain's ability to work on several problems at once:
 
 **Key Capabilities:**
-- **Parallel Thought Streams**: Maintain 2-7 concurrent reasoning threads (working memory)
-- **Rapid Attention Switching**: Switch focus between thoughts in milliseconds (100-200ms)
+- **Bounded Active Goals**: System 2 keeps a small, configurable number of active goal slots (default 4, ablated over 2, 4 and 7)
+- **Attention Switching**: Switch focus between thoughts without losing context. There is no artificial switching delay.
 - **Background Processing**: Difficult problems "cook" in background while working on easier ones
 - **Thought Persistence**: Suspend and resume thoughts without losing context
 - **Cross-Pollination**: Insights from one thought help solve others (creative connections!)
@@ -131,11 +131,7 @@ E-Brain processes multiple "thoughts" simultaneously, mimicking the brain's abil
 - Read research paper: parse current sentence + integrate context + predict next simultaneously
 - Handle interruptions gracefully: suspend all thoughts, answer question, resume work
 
-**Developmental Progression:**
-- **Phase 2**: 2 concurrent thoughts (basic multitasking)
-- **Phase 3**: 3-4 thoughts (language processing needs parallel streams)
-- **Phase 4**: 5-7 thoughts (full adult working memory capacity)
-- **Phase 5**: Expert attention management with deep cross-pollination
+**Slot count:** a hyperparameter of the deliberative controller, chosen by ablation ([docs/PLAN.md §2](docs/PLAN.md#2-terminology)). A growing per-phase slot schedule is only a candidate curriculum variable, not a design fact.
 
 Enables **faster learning and problem-solving** through parallel exploration and creative insight transfer between thought streams.
 
@@ -146,21 +142,16 @@ E-Brain maintains multi-scale timing mechanisms, mimicking the brain's ability t
 - **Multi-Scale Clocks**: Millisecond precision to circadian rhythms (months)
 - **Temporal Prediction**: Learn "when" events will occur, not just "what"
 - **Precise Action Timing**: Context-dependent timing adjustments (<20ms accuracy)
-- **Sleep/Consolidation Cycles**: Automatic memory optimization during rest periods
-- **Circadian Rhythms**: Activity patterns matching developmental stage (active/rest periods)
+- **Consolidation Scheduling**: Memory consolidation triggered by training signals (task boundaries, replay-buffer fill, measured drift), not by the time of day
 - **Learned Temporal Patterns**: Discover regularities (user response times, task durations)
 
 **Examples:**
 - Predict user responds after ~2 seconds (learned from interaction history)
 - Schedule action to execute at precise moment (reward arrives 500ms after action)
 - Sleep consolidation: episodic memories → semantic knowledge (like REM sleep)
-- Circadian: active learning 6am-10pm, deep consolidation 10pm-6am
 - Multi-hour prediction: "Training will complete in 3 hours"
 
-**Integration with Bio-Inspired Neurons:**
-- STDP learning windows use timing system (neurons that fire within 20ms strengthen)
-- Temporal dynamics (leaky integration) coordinated with global clocks
-- Action timing precision improves with practice
+Timing is a learned capability (temporal prediction in the environment), not a wall-clock subsystem. The spiking/STDP timing ideas are in the off-critical-path research branch ([Appendix A](docs/appendix-a-bio-inspired-neuron-research-branch.md)).
 
 ### 13. **Sensory-Grounded Thoughts** 🎨👂✋
 
@@ -193,13 +184,11 @@ Enables **human-like cognition** through grounded understanding, mental simulati
 E-Brain is **not limited by human biological constraints**. While learning *how* humans think, it computes with superhuman capabilities:
 
 **Computational Superpowers:**
-- **Unlimited Working Memory**: Hold 1000+ items simultaneously (vs human 7±2)
-- **Perfect Long-Term Memory**: Never forget, exact recall of all experiences
-- **Massive Parallelization**: Process 1000+ thoughts simultaneously on GPU
-- **Microsecond Reactions**: <1ms response time (vs human ~200ms)
-- **Infinite Attention**: 24/7 focus without fatigue or performance degradation
+- **Large-scale memory (System 1)**: exact retrieval from a vector store, bounded by storage and a retention policy
+- **Parallel search (System 1)**: many batched rollouts evaluated at once on GPU
+- **Bounded deliberation (System 2)**: a configurable number of active goal slots (default 4)
 
-**System Tool Integration** (learns through developmental stages):
+**System Tool Integration** (Horizon 3, and only after the tool governance spec, TRK-17, is approved):
 - **Subprocess Execution**: Run system commands, execute scripts
 - **Code Generation**: Write and execute code dynamically to solve problems
 - **API Integration**: Call REST APIs, integrate external services
@@ -221,15 +210,20 @@ E-Brain is **not limited by human biological constraints**. While learning *how*
 - Learn new tools through experimentation and build mental models
 - Create custom tools optimized for specific problem domains
 
-**Result**: Human-like understanding + machine-level computation + comprehensive tool access = superhuman problem-solving capability.
+**Safety boundary:** every side-effecting tool call runs in an isolated sandbox, through a capability-scoped tool registry, behind approval gates, and is recorded in an audit log. See [docs/13-design-review-2026-11.md §6](docs/13-design-review-2026-11.md#6-safety-security-and-alignment).
 
 ## 📚 Documentation
 
 Comprehensive documentation is available in the `docs/` folder:
 
+- **[Canonical Plan](docs/PLAN.md)** - ⭐ **Single source of truth: horizons, gates, budget, team**
+- **[Decision Records](docs/DECISIONS.md)** - Why each decision on record was made
+- **[Horizon 1 Spec](docs/14-horizon-1-spec.md)** - Growth + continual learning experiment and mechanism spec
+- **[Horizon 2 Spec (draft)](docs/15-horizon-2-spec.md)** - Grounded concepts, world model and agency
+- **[Horizon 3 Spec (draft)](docs/16-horizon-3-spec.md)** - Deliberation, tools and adapters
 - **[Project Overview](docs/README.md)** - Documentation index and quick start
 - **[Feasibility Analysis](docs/01-feasibility-analysis.md)** - Research foundation, technical feasibility, and extended vision
-- **[Architecture Design](docs/02-architecture.md)** - Technical architecture, components, and data flow
+- **[Architecture Design](docs/02-architecture.md)** - Design foundations and component cards
 - **[Developmental Phases](docs/03-developmental-phases.md)** - Detailed learning stages and evaluation frameworks
 - **[Implementation Roadmap](docs/04-implementation-roadmap.md)** - 24+ month development plan with milestones
 - **[Development Strategy](docs/05-development-strategy.md)** - ⭐ **Implementation vs training approach, data requirements, team structure**
@@ -239,52 +233,44 @@ Comprehensive documentation is available in the `docs/` folder:
 - **[Tech Stack Decision Framework](docs/08-tech-stack-decision-framework.md)** - Comprehensive rationale for technology choices
 - **[Computational Advantages & Tool Use](docs/10-computational-advantages-and-tool-use.md)** - ⚡ **Superhuman computation + system integration**
 - **[Philosophy: Best of Both Worlds](docs/11-philosophy-best-of-both-worlds.md)** - ☯️ **Philosophy: Combining biological and computational intelligence**
-- **[Review & Recommendations](docs/12-project-plan-review-and-recommendations.md)** - 📋 **Comprehensive project plan review, architectural critique & tracking matrix**
+- **[Review & Recommendations](docs/12-project-plan-review-and-recommendations.md)** - 📋 **Project plan review (Sept 2026) & tracking matrix**
+- **[Design Review (Nov 2026)](docs/13-design-review-2026-11.md)** - Full design review and action items TRK-11 to TRK-29
+- **[Appendix A: Bio-Inspired Neuron](docs/appendix-a-bio-inspired-neuron-research-branch.md)** - Spiking/STDP research branch (off the critical path)
+- **[Appendix B: Architecture v1](docs/appendix-b-architecture-v1-unscheduled.md)** - The earlier component designs, unscheduled
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.12+
 - CUDA-capable GPU (recommended)
 - 16GB+ RAM
 
-### Installation (Coming Soon)
+### Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/loganathan-sekaran/ebrain.git
 cd ebrain
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install in editable mode
+python3.12 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
-
-# Run initial tests
-pytest tests/
+pre-commit install
+pytest
 ```
+
+See [docs/00-getting-started.md](docs/00-getting-started.md) for the full onboarding checklist.
 
 ## 🏗️ Project Status
 
-**Current Phase**: Planning and Design  
-**Start Date**: October 31, 2025  
-**Target MVP**: Q2 2026 (3-6 months)
+**Current stage**: Stage 0 (repo hygiene). Horizon 1 starts when it lands.
+**Plan**: [docs/PLAN.md](docs/PLAN.md) is the only place that holds months, gates and budgets.
 
-### Roadmap Highlights
-
-| Milestone | Timeline | Status |
-|-----------|----------|--------|
-| Proof of Concept (Growth Mechanism) | Month 1-2 | 📋 Planned |
-| MVP (Single Modality Learning) | Month 3-6 | 📋 Planned |
-| Multi-Modal Integration | Month 7-10 | 📋 Planned |
-| Abstract Reasoning | Month 11-14 | 📋 Planned |
-| Expertise & Specialization | Month 15-20 | 📋 Planned |
-| Model Cloning System | Month 19-21 | 📋 Planned |
-| Knowledge Transfer Protocol | Month 20-22 | 📋 Planned |
-| Ecosystem Hub | Month 22-24+ | 📋 Planned |
+| Horizon | Focus | Gate | Status |
+|---|---|---|---|
+| H1 | Growth + continual learning (Split-CIFAR-100, class-incremental) | Gate 1 | 📋 Planned |
+| H2 | Grounded concepts + agency (MiniGrid/BabyAI) | Gate 2 | 📋 Planned |
+| H3 | Deliberation, governed tools, adapter clones | Gate 3 | 📋 Planned |
+| Beyond | Expertise, concept transfer, ecosystem | — | Unscheduled |
 
 ## 🔬 Research Foundation
 
@@ -298,6 +284,8 @@ E-Brain builds on established AI research areas:
 - **Knowledge Distillation**: Teacher-student learning, concept transfer
 
 ## 🎓 Use Cases
+
+> **Illustrative long-term use cases only.** None of them are in the H1–H3 plan. Any medical use would need clinical validation, regulatory approval and human oversight.
 
 ### Medical AI Network
 Clone base model to create specialized medical experts:
@@ -341,7 +329,7 @@ If you use E-Brain in your research, please cite:
 
 ## 📄 License
 
-TBD - License to be determined
+Licensed under the [Apache License 2.0](LICENSE).
 
 ## 🙏 Acknowledgments
 
@@ -361,4 +349,4 @@ Inspired by:
 
 **Note**: This is an experimental research project. The timeline and scope are ambitious. See [docs/01-feasibility-analysis.md](docs/01-feasibility-analysis.md) for detailed feasibility assessment.
 
-*Last Updated: November 3, 2025*
+*Last Updated: November 25, 2026*
